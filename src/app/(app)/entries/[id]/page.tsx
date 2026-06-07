@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import DOMPurify from "isomorphic-dompurify";
+import { sanitizeBodyHtml } from "@/lib/sanitize";
 import { ArrowLeftIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { EntryActions } from "@/components/entry-actions";
@@ -24,7 +24,7 @@ export default async function EntryDetailPage({ params }: { params: Promise<{ id
 
   if (!entry) notFound();
 
-  const safeHtml = DOMPurify.sanitize(entry.body_html);
+  const safeHtml = sanitizeBodyHtml(entry.body_html);
 
   return (
     <article className="mx-auto flex max-w-3xl flex-col gap-6">

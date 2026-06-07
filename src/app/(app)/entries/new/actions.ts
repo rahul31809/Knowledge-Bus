@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import DOMPurify from "isomorphic-dompurify";
+import { sanitizeBodyHtml, htmlToPlainText } from "@/lib/sanitize";
 import { createClient } from "@/lib/supabase/server";
 import { ENTRY_TYPES, type EntryFormState, type EntryType } from "@/lib/types";
 
@@ -31,10 +31,8 @@ export async function createEntry(_prevState: EntryFormState, formData: FormData
     )
   );
 
-  const body_html = DOMPurify.sanitize(bodyRaw);
-  const body_text = DOMPurify.sanitize(bodyRaw, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] })
-    .replace(/\s+/g, " ")
-    .trim();
+  const body_html = sanitizeBodyHtml(bodyRaw);
+  const body_text = htmlToPlainText(bodyRaw);
 
   const supabase = await createClient();
   const { error } = await supabase.from("knowledge_entries").insert({
