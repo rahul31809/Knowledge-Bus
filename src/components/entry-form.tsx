@@ -12,8 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ENTRY_TYPES } from "@/lib/types";
-import { createEntry, type EntryFormState } from "./actions";
+import { ENTRY_TYPES, type EntryFormState } from "@/lib/types";
 
 const initialState: EntryFormState = { error: null };
 
@@ -24,16 +23,42 @@ function todayISO(): string {
   return `${d.getFullYear()}-${month}-${day}`;
 }
 
-export function EntryForm() {
-  const [state, formAction, pending] = useActionState(createEntry, initialState);
-  const [entryType, setEntryType] = useState<string>(ENTRY_TYPES[0].value);
+export interface EntryFormDefaults {
+  id?: string;
+  title?: string;
+  entry_type?: string;
+  source_routine?: string | null;
+  subject_tags?: string[];
+  entry_date?: string;
+  summary?: string | null;
+  body_html?: string;
+}
+
+interface EntryFormProps {
+  action: (state: EntryFormState, formData: FormData) => Promise<EntryFormState>;
+  defaults?: EntryFormDefaults;
+  submitLabel: string;
+  pendingLabel: string;
+}
+
+export function EntryForm({ action, defaults, submitLabel, pendingLabel }: EntryFormProps) {
+  const [state, formAction, pending] = useActionState(action, initialState);
+  const [entryType, setEntryType] = useState<string>(defaults?.entry_type ?? ENTRY_TYPES[0].value);
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
+      {defaults?.id ? <input type="hidden" name="id" value={defaults.id} /> : null}
+
       <div className="grid gap-5 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
           <Label htmlFor="title">Title</Label>
-          <Input id="title" name="title" required placeholder="e.g. Carbon Markets — Weekly Study Notes" />
+          <Input
+            id="title"
+            name="title"
+            required
+            defaultValue={defaults?.title}
+            placeholder="e.g. Carbon Markets — Weekly Study Notes"
+          />
         </div>
 
         <div className="flex flex-col gap-2">
@@ -55,18 +80,34 @@ export function EntryForm() {
 
         <div className="flex flex-col gap-2">
           <Label htmlFor="entry_date">Date</Label>
-          <Input id="entry_date" name="entry_date" type="date" defaultValue={todayISO()} required />
+          <Input
+            id="entry_date"
+            name="entry_date"
+            type="date"
+            defaultValue={defaults?.entry_date ?? todayISO()}
+            required
+          />
         </div>
 
         <div className="flex flex-col gap-2">
           <Label htmlFor="source_routine">Source (optional)</Label>
-          <Input id="source_routine" name="source_routine" placeholder="e.g. SPJIMR Weekly Study Notes" />
+          <Input
+            id="source_routine"
+            name="source_routine"
+            defaultValue={defaults?.source_routine ?? ""}
+            placeholder="e.g. SPJIMR Weekly Study Notes"
+          />
         </div>
       </div>
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="subject_tags">Tags (comma-separated)</Label>
-        <Input id="subject_tags" name="subject_tags" placeholder="e.g. carbon markets, policy, IEA" />
+        <Input
+          id="subject_tags"
+          name="subject_tags"
+          defaultValue={defaults?.subject_tags?.join(", ") ?? ""}
+          placeholder="e.g. carbon markets, policy, IEA"
+        />
       </div>
 
       <div className="flex flex-col gap-2">
@@ -75,6 +116,7 @@ export function EntryForm() {
           id="summary"
           name="summary"
           rows={2}
+          defaultValue={defaults?.summary ?? ""}
           placeholder="One or two lines on the so-what — shows up in the browse list"
         />
       </div>
@@ -89,6 +131,7 @@ export function EntryForm() {
           name="body_html"
           rows={14}
           required
+          defaultValue={defaults?.body_html ?? ""}
           className="font-mono text-xs"
           placeholder="Paste the routine output here…"
         />
@@ -102,7 +145,7 @@ export function EntryForm() {
 
       <div className="flex justify-end gap-3">
         <Button type="submit" disabled={pending}>
-          {pending ? "Saving…" : "Save entry"}
+          {pending ? pendingLabel : submitLabel}
         </Button>
       </div>
     </form>

@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { EntryForm } from "./entry-form";
+import { EntryForm } from "@/components/entry-form";
+import { createEntry } from "./actions";
 
 export default function NewEntryPage() {
   return (
@@ -14,7 +15,7 @@ export default function NewEntryPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <EntryForm />
+          <EntryForm action={createEntry} submitLabel="Save entry" pendingLabel="Saving…" />
         </CardContent>
       </Card>
     </div>

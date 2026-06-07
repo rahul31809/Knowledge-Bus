@@ -30,3 +30,19 @@ export type KnowledgeEntryInput = Pick<
   KnowledgeEntry,
   "title" | "entry_type" | "source_routine" | "subject_tags" | "entry_date" | "summary" | "body_html" | "body_text"
 >;
+
+export interface EntryFormState {
+  error: string | null;
+}
+
+const MONTHS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+// entry_date is a plain "YYYY-MM-DD" string — parse the parts directly so the
+// displayed date can't shift by a day under local-timezone conversion.
+export function formatEntryDate(isoDate: string): string {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  if (!year || !month || !day) return isoDate;
+  return `${day} ${MONTHS[month - 1]} ${year}`;
+}
