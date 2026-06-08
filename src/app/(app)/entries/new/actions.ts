@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { sanitizeBodyHtml, htmlToPlainText } from "@/lib/sanitize";
 import { createClient } from "@/lib/supabase/server";
-import { ENTRY_TYPES, type EntryFormState, type EntryType } from "@/lib/types";
+import { ENTRY_TYPES, UNSORTED_LABEL, type EntryFormState, type EntryType } from "@/lib/types";
 
 const ENTRY_TYPE_VALUES: string[] = ENTRY_TYPES.map((t) => t.value);
 
@@ -13,6 +13,8 @@ export async function createEntry(_prevState: EntryFormState, formData: FormData
   const entryType = String(formData.get("entry_type") ?? "");
   const sourceRoutine = String(formData.get("source_routine") ?? "").trim();
   const tagsRaw = String(formData.get("subject_tags") ?? "");
+  const subjectRaw = String(formData.get("subject") ?? "").trim();
+  const sessionRaw = String(formData.get("session_label") ?? "").trim();
   const entryDate = String(formData.get("entry_date") ?? "").trim();
   const summary = String(formData.get("summary") ?? "").trim();
   const bodyRaw = String(formData.get("body_html") ?? "");
@@ -31,6 +33,10 @@ export async function createEntry(_prevState: EntryFormState, formData: FormData
     )
   );
 
+  const isStudyNotes = entryType === "study_notes";
+  const subject = isStudyNotes && subjectRaw && subjectRaw !== UNSORTED_LABEL ? subjectRaw : null;
+  const session_label = isStudyNotes && sessionRaw && sessionRaw !== UNSORTED_LABEL ? sessionRaw : null;
+
   const body_html = sanitizeBodyHtml(bodyRaw);
   const body_text = htmlToPlainText(bodyRaw);
 
@@ -40,6 +46,8 @@ export async function createEntry(_prevState: EntryFormState, formData: FormData
     entry_type: entryType as EntryType,
     source_routine: sourceRoutine || null,
     subject_tags,
+    subject,
+    session_label,
     entry_date: entryDate,
     summary: summary || null,
     body_html,

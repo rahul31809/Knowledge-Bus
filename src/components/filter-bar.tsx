@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { ENTRY_TYPES } from "@/lib/types";
+import { ENTRY_TYPES, type EntryType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface FilterBarProps {
   activeType?: string;
   activeTag?: string;
   query?: string;
+  types?: readonly { value: EntryType; label: string }[];
 }
 
 function buildHref(params: { q?: string; type?: string; tag?: string }) {
@@ -26,7 +27,7 @@ function pillClasses(active: boolean) {
   );
 }
 
-export function FilterBar({ activeType, activeTag, query }: FilterBarProps) {
+export function FilterBar({ activeType, activeTag, query, types = ENTRY_TYPES }: FilterBarProps) {
   const hasFilters = Boolean(activeType || activeTag);
 
   return (
@@ -34,7 +35,7 @@ export function FilterBar({ activeType, activeTag, query }: FilterBarProps) {
       <Link href={buildHref({ q: query, tag: activeTag })} className={pillClasses(!activeType)}>
         All types
       </Link>
-      {ENTRY_TYPES.map((t) => (
+      {types.map((t) => (
         <Link
           key={t.value}
           href={buildHref({ q: query, type: activeType === t.value ? undefined : t.value, tag: activeTag })}

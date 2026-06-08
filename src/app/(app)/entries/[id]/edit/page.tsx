@@ -28,6 +28,8 @@ export default async function EditEntryPage({ params }: { params: Promise<{ id: 
               entry_type: entry.entry_type,
               source_routine: entry.source_routine,
               subject_tags: entry.subject_tags,
+              subject: entry.subject,
+              session_label: entry.session_label,
               entry_date: entry.entry_date,
               summary: entry.summary,
               body_html: entry.body_html,

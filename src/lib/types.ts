@@ -18,6 +18,8 @@ export interface KnowledgeEntry {
   entry_type: EntryType;
   source_routine: string | null;
   subject_tags: string[];
+  subject: string | null;
+  session_label: string | null;
   entry_date: string; // YYYY-MM-DD
   summary: string | null;
   body_html: string;
@@ -28,8 +30,19 @@ export interface KnowledgeEntry {
 
 export type KnowledgeEntryInput = Pick<
   KnowledgeEntry,
-  "title" | "entry_type" | "source_routine" | "subject_tags" | "entry_date" | "summary" | "body_html" | "body_text"
+  | "title"
+  | "entry_type"
+  | "source_routine"
+  | "subject_tags"
+  | "subject"
+  | "session_label"
+  | "entry_date"
+  | "summary"
+  | "body_html"
+  | "body_text"
 >;
+
+export const UNSORTED_LABEL = "Unsorted";
 
 export interface EntryFormState {
   error: string | null;

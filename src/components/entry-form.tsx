@@ -29,6 +29,8 @@ export interface EntryFormDefaults {
   entry_type?: string;
   source_routine?: string | null;
   subject_tags?: string[];
+  subject?: string | null;
+  session_label?: string | null;
   entry_date?: string;
   summary?: string | null;
   body_html?: string;
@@ -99,6 +101,32 @@ export function EntryForm({ action, defaults, submitLabel, pendingLabel }: Entry
           />
         </div>
       </div>
+
+      {entryType === "study_notes" ? (
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="subject">Subject (course)</Label>
+            <Input
+              id="subject"
+              name="subject"
+              defaultValue={defaults?.subject ?? ""}
+              placeholder="e.g. Marketing Management"
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="session_label">Session</Label>
+            <Input
+              id="session_label"
+              name="session_label"
+              defaultValue={defaults?.session_label ?? ""}
+              placeholder="e.g. Session 4 — Segmentation"
+            />
+          </div>
+          <p className="text-xs text-neutral-500 sm:col-span-2">
+            Leave blank to file under &quot;{`Unsorted`}&quot; — you can fill these in later from the edit page.
+          </p>
+        </div>
+      ) : null}
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="subject_tags">Tags (comma-separated)</Label>
