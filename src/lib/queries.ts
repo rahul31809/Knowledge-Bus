@@ -119,7 +119,13 @@ export async function fetchSubjectProfile(
     .select("*")
     .eq("subject", subject)
     .maybeSingle();
-  if (error) throw error;
+
+  if (error) {
+    // Postgres "undefined_table" — migration 0005 hasn't run yet. Treat as "no
+    // profile" rather than crashing the page; the section just won't render.
+    if (error.code === "42P01") return null;
+    throw error;
+  }
   return data as SubjectProfile | null;
 }
 
