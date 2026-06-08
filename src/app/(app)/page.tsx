@@ -3,11 +3,34 @@ import { buttonVariants } from "@/components/ui/button";
 import { EntryCard } from "@/components/entry-card";
 import { FilterBar } from "@/components/filter-bar";
 import { SubjectCard } from "@/components/subject-card";
-import { fetchEntries, fetchSubjects } from "@/lib/queries";
+import { fetchDriveSubjectNames } from "@/lib/drive-sync/client";
+import { fetchEntries, fetchSubjects, type SubjectSummary } from "@/lib/queries";
 import { ENTRY_TYPES } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
 
 const BRIEFING_TYPES = ENTRY_TYPES.filter((t) => t.value !== "study_notes");
+
+// Subjects come from synced notes, but a course folder in Drive should show
+// up the moment it exists — even before any notes have been synced from it.
+// Drive-only entries get zeroed counts and a null date, sorted alphabetically
+// after the subjects that already have notes.
+function withDriveOnlySubjects(subjects: SubjectSummary[], driveNames: string[] | null): SubjectSummary[] {
+  if (!driveNames || driveNames.length === 0) return subjects;
+
+  const known = new Set(subjects.map((s) => s.subject));
+  const driveOnly: SubjectSummary[] = driveNames
+    .filter((name) => !known.has(name))
+    .map((name) => ({ subject: name, sessionCount: 0, entryCount: 0, latestDate: null }));
+
+  if (driveOnly.length === 0) return subjects;
+
+  return [...subjects, ...driveOnly].sort((a, b) => {
+    if (a.latestDate && b.latestDate) return b.latestDate.localeCompare(a.latestDate);
+    if (a.latestDate) return -1;
+    if (b.latestDate) return 1;
+    return a.subject.localeCompare(b.subject);
+  });
+}
 
 export default async function BrowsePage({
   searchParams,
@@ -53,10 +76,13 @@ export default async function BrowsePage({
     );
   }
 
-  const [subjects, briefingEntries] = await Promise.all([
+  const [subjects, driveSubjectNames, briefingEntries] = await Promise.all([
     fetchSubjects(supabase),
+    fetchDriveSubjectNames(),
     fetchEntries(supabase, { excludeType: "study_notes" }),
   ]);
+
+  const allSubjects = withDriveOnlySubjects(subjects, driveSubjectNames);
 
   return (
     <div className="flex flex-col gap-10">
@@ -72,13 +98,13 @@ export default async function BrowsePage({
 
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold text-neutral-900">Subjects</h2>
-        {subjects.length === 0 ? (
+        {allSubjects.length === 0 ? (
           <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-8 text-center text-sm text-neutral-500">
             No study notes yet. Add one with type &quot;Study Notes&quot; to start building out your courses.
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {subjects.map((subject) => (
+            {allSubjects.map((subject) => (
               <SubjectCard key={subject.subject} subject={subject} />
             ))}
           </div>

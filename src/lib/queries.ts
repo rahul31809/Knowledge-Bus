@@ -42,7 +42,8 @@ export interface SubjectSummary {
   subject: string;
   sessionCount: number;
   entryCount: number;
-  latestDate: string;
+  // null for subjects that exist only as a Drive folder with no synced notes yet
+  latestDate: string | null;
 }
 
 export interface SessionSummary {

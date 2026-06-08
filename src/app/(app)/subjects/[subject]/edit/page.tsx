@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SubjectProfileForm } from "@/components/subject-profile-form";
+import { fetchSubjectDriveResources } from "@/lib/drive-sync/client";
 import { fetchSessions, fetchSubjectProfile } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 import { upsertSubjectProfile } from "./actions";
@@ -11,12 +12,13 @@ export default async function EditSubjectInfoPage({ params }: { params: Promise<
   const subject = decodeURIComponent(subjectParam);
 
   const supabase = await createClient();
-  const [sessions, profile] = await Promise.all([
+  const [sessions, profile, drive] = await Promise.all([
     fetchSessions(supabase, subject),
     fetchSubjectProfile(supabase, subject),
+    fetchSubjectDriveResources(subject),
   ]);
 
-  if (sessions.length === 0) notFound();
+  if (sessions.length === 0 && drive.status !== "found") notFound();
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">

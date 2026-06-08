@@ -1,5 +1,5 @@
 import { ExternalLinkIcon, FileTextIcon } from "lucide-react";
-import { fetchSubjectDriveFiles, type DriveFileGroup } from "@/lib/drive-sync/client";
+import type { DriveFileGroup } from "@/lib/drive-sync/client";
 
 function FileLink({ id, name, webViewLink }: { id: string; name: string; webViewLink: string }) {
   return (
@@ -32,8 +32,7 @@ function FileGroup({ group }: { group: DriveFileGroup }) {
   );
 }
 
-export async function SubjectDriveFiles({ subject }: { subject: string }) {
-  const groups = await fetchSubjectDriveFiles(subject);
+export function SubjectDriveFiles({ groups }: { groups: DriveFileGroup[] | null }) {
   if (!groups || groups.every((g) => g.files.length === 0)) return null;
 
   return (
@@ -43,19 +42,6 @@ export async function SubjectDriveFiles({ subject }: { subject: string }) {
       <div className="flex flex-col gap-3">
         {groups.map((group) => (
           <FileGroup key={group.folderName ?? "_root"} group={group} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-export function SubjectDriveFilesSkeleton() {
-  return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-4">
-      <h2 className="px-2 text-sm font-semibold text-neutral-900">Files in Drive</h2>
-      <div className="mt-2 flex flex-col gap-2 px-2">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="h-5 w-2/3 animate-pulse rounded bg-neutral-100" />
         ))}
       </div>
     </div>

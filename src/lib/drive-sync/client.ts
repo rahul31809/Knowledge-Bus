@@ -121,19 +121,44 @@ export async function listSubjectFiles(drive: drive_v3.Drive, subjectFolderId: s
   return groups;
 }
 
-// Returns null when Drive isn't configured or the subject has no matching
-// Drive folder — callers should treat that as "nothing to show", not an error.
-export async function fetchSubjectDriveFiles(subject: string): Promise<DriveFileGroup[] | null> {
+export type SubjectDriveLookup =
+  | { status: "unavailable" }
+  | { status: "not_found" }
+  | { status: "found"; files: DriveFileGroup[] };
+
+// Looks up a subject's Drive folder and lists its files in one round trip.
+// "unavailable" covers missing config or API errors — degrade silently.
+// "not_found" means Drive is reachable but no folder matches this subject,
+// which callers use to distinguish "this subject doesn't exist anywhere"
+// from "it exists in Drive but we couldn't reach Drive right now".
+export async function fetchSubjectDriveResources(subject: string): Promise<SubjectDriveLookup> {
+  const rootFolderId = process.env.DRIVE_SUBJECTS_ROOT_FOLDER_ID;
+  if (!rootFolderId || !process.env.GOOGLE_SERVICE_ACCOUNT_JSON) return { status: "unavailable" };
+
+  try {
+    const drive = getDriveClient();
+    const subfolders = await listSubfolders(drive, rootFolderId);
+    const folder = subfolders.find((f) => f.name === subject);
+    if (!folder) return { status: "not_found" };
+
+    const files = await listSubjectFiles(drive, folder.id);
+    return { status: "found", files };
+  } catch {
+    return { status: "unavailable" };
+  }
+}
+
+// Names of every subject folder in Drive — lets the subjects list surface
+// courses that only exist as a Drive folder, with no synced notes yet.
+// Returns null when Drive isn't configured or unreachable.
+export async function fetchDriveSubjectNames(): Promise<string[] | null> {
   const rootFolderId = process.env.DRIVE_SUBJECTS_ROOT_FOLDER_ID;
   if (!rootFolderId || !process.env.GOOGLE_SERVICE_ACCOUNT_JSON) return null;
 
   try {
     const drive = getDriveClient();
     const subfolders = await listSubfolders(drive, rootFolderId);
-    const folder = subfolders.find((f) => f.name === subject);
-    if (!folder) return null;
-
-    return await listSubjectFiles(drive, folder.id);
+    return subfolders.map((f) => f.name);
   } catch {
     return null;
   }

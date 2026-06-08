@@ -20,7 +20,9 @@ export function SubjectCard({ subject }: { subject: SubjectSummary }) {
       <p className="text-sm text-neutral-500">
         {plural(subject.sessionCount, "session")} · {plural(subject.entryCount, "note")}
       </p>
-      <p className="text-xs text-neutral-400">Last updated {formatEntryDate(subject.latestDate)}</p>
+      <p className="text-xs text-neutral-400">
+        {subject.latestDate ? `Last updated ${formatEntryDate(subject.latestDate)}` : "No synced notes yet"}
+      </p>
     </Link>
   );
 }

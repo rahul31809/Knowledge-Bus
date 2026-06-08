@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { PencilIcon } from "lucide-react";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { SessionCard } from "@/components/session-card";
-import { SubjectDriveFiles, SubjectDriveFilesSkeleton } from "@/components/subject-drive-files";
+import { SubjectDriveFiles } from "@/components/subject-drive-files";
 import { buttonVariants } from "@/components/ui/button";
+import { fetchSubjectDriveResources } from "@/lib/drive-sync/client";
 import { fetchSessions, fetchSubjectProfile } from "@/lib/queries";
 import { UNSORTED_LABEL, type SubjectProfile } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
@@ -26,12 +26,18 @@ export default async function SubjectPage({ params }: { params: Promise<{ subjec
   const subject = decodeURIComponent(subjectParam);
 
   const supabase = await createClient();
-  const [sessions, profile] = await Promise.all([
+  const [sessions, profile, drive] = await Promise.all([
     fetchSessions(supabase, subject),
     fetchSubjectProfile(supabase, subject),
+    fetchSubjectDriveResources(subject),
   ]);
 
-  if (sessions.length === 0) notFound();
+  // A subject is real if it has synced notes OR a matching Drive folder.
+  // "unavailable" (Drive unreachable/unconfigured) never triggers a 404 on
+  // its own — that would 404 real subjects whenever Drive has a hiccup.
+  if (sessions.length === 0 && drive.status !== "found") notFound();
+
+  const driveFiles = drive.status === "found" ? drive.files : null;
 
   const sections = PROFILE_SECTIONS.map((section) => ({ ...section, value: profile?.[section.key] as string | null }))
     .filter((section) => section.value);
@@ -76,17 +82,19 @@ export default async function SubjectPage({ params }: { params: Promise<{ subjec
         </Link>
       ) : null}
 
-      {canEditInfo ? (
-        <Suspense fallback={<SubjectDriveFilesSkeleton />}>
-          <SubjectDriveFiles subject={subject} />
-        </Suspense>
-      ) : null}
+      {canEditInfo ? <SubjectDriveFiles groups={driveFiles} /> : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {sessions.map((session) => (
-          <SessionCard key={session.session_label} subject={subject} session={session} />
-        ))}
-      </div>
+      {sessions.length > 0 ? (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {sessions.map((session) => (
+            <SessionCard key={session.session_label} subject={subject} session={session} />
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-8 text-center text-sm text-neutral-500">
+          No synced session notes for this subject yet — they&apos;ll show up here once added.
+        </div>
+      )}
     </div>
   );
 }
