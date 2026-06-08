@@ -20,6 +20,8 @@ export interface KnowledgeEntry {
   subject_tags: string[];
   subject: string | null;
   session_label: string | null;
+  drive_file_id: string | null;
+  drive_synced_at: string | null;
   entry_date: string; // YYYY-MM-DD
   summary: string | null;
   body_html: string;

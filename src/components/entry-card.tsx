@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FolderSyncIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { entryTypeLabel, formatEntryDate, type KnowledgeEntry } from "@/lib/types";
 
@@ -21,6 +22,14 @@ export function EntryCard({ entry }: { entry: KnowledgeEntry }) {
           <span className="text-xs text-neutral-500">{formatEntryDate(entry.entry_date)}</span>
           {entry.source_routine ? (
             <span className="text-xs text-neutral-400">· {entry.source_routine}</span>
+          ) : null}
+          {entry.drive_file_id ? (
+            <span
+              className="inline-flex items-center gap-1 text-xs text-neutral-400"
+              title="Synced from Google Drive"
+            >
+              <FolderSyncIcon className="size-3.5" /> Synced
+            </span>
           ) : null}
         </div>
 
