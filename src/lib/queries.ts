@@ -1,5 +1,5 @@
 import type { createClient } from "@/lib/supabase/server";
-import { UNSORTED_LABEL, type KnowledgeEntry } from "./types";
+import { UNSORTED_LABEL, type KnowledgeEntry, type SubjectProfile } from "./types";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -106,6 +106,21 @@ export async function fetchSessions(supabase: SupabaseServerClient, subject: str
   return Array.from(bySession.entries())
     .map(([session_label, acc]) => ({ session_label, entryCount: acc.entryCount, latestDate: acc.latestDate }))
     .sort((a, b) => b.latestDate.localeCompare(a.latestDate));
+}
+
+export async function fetchSubjectProfile(
+  supabase: SupabaseServerClient,
+  subject: string
+): Promise<SubjectProfile | null> {
+  if (subject === UNSORTED_LABEL) return null;
+
+  const { data, error } = await supabase
+    .from("subject_profiles")
+    .select("*")
+    .eq("subject", subject)
+    .maybeSingle();
+  if (error) throw error;
+  return data as SubjectProfile | null;
 }
 
 export async function fetchEntriesBySession(

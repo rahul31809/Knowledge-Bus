@@ -1,30 +1,78 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { PencilIcon } from "lucide-react";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { SessionCard } from "@/components/session-card";
-import { fetchSessions } from "@/lib/queries";
+import { buttonVariants } from "@/components/ui/button";
+import { fetchSessions, fetchSubjectProfile } from "@/lib/queries";
+import { UNSORTED_LABEL, type SubjectProfile } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
 
 function plural(count: number, word: string) {
   return `${count} ${word}${count === 1 ? "" : "s"}`;
 }
 
+const PROFILE_SECTIONS: { key: keyof SubjectProfile; title: string }[] = [
+  { key: "overview", title: "Overview" },
+  { key: "course_outline", title: "Course outline" },
+  { key: "frameworks", title: "Important frameworks" },
+  { key: "revision_highlights", title: "Revision highlights" },
+];
+
 export default async function SubjectPage({ params }: { params: Promise<{ subject: string }> }) {
   const { subject: subjectParam } = await params;
   const subject = decodeURIComponent(subjectParam);
 
   const supabase = await createClient();
-  const sessions = await fetchSessions(supabase, subject);
+  const [sessions, profile] = await Promise.all([
+    fetchSessions(supabase, subject),
+    fetchSubjectProfile(supabase, subject),
+  ]);
 
   if (sessions.length === 0) notFound();
+
+  const sections = PROFILE_SECTIONS.map((section) => ({ ...section, value: profile?.[section.key] as string | null }))
+    .filter((section) => section.value);
+
+  const canEditInfo = subject !== UNSORTED_LABEL;
 
   return (
     <div className="flex flex-col gap-6">
       <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: subject }]} />
 
-      <div>
-        <h1 className="text-2xl font-semibold text-neutral-900">{subject}</h1>
-        <p className="text-sm text-neutral-500">{plural(sessions.length, "session")}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-neutral-900">{subject}</h1>
+          <p className="text-sm text-neutral-500">{plural(sessions.length, "session")}</p>
+        </div>
+        {canEditInfo ? (
+          <Link
+            href={`/subjects/${encodeURIComponent(subject)}/edit`}
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            <PencilIcon className="size-3.5" />
+            {profile ? "Edit info" : "Add subject info"}
+          </Link>
+        ) : null}
       </div>
+
+      {sections.length > 0 ? (
+        <div className="flex flex-col gap-4">
+          {sections.map((section) => (
+            <div key={section.key} className="rounded-lg border border-neutral-200 bg-white p-4">
+              <h2 className="text-sm font-semibold text-neutral-900">{section.title}</h2>
+              <p className="mt-2 whitespace-pre-wrap text-sm text-neutral-600">{section.value}</p>
+            </div>
+          ))}
+        </div>
+      ) : canEditInfo ? (
+        <Link
+          href={`/subjects/${encodeURIComponent(subject)}/edit`}
+          className="rounded-lg border border-dashed border-neutral-300 bg-white p-4 text-sm text-neutral-500 transition-colors hover:border-neutral-400 hover:text-neutral-700"
+        >
+          No course overview, outline, frameworks, or revision highlights yet — add subject info.
+        </Link>
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {sessions.map((session) => (

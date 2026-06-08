@@ -44,6 +44,25 @@ export type KnowledgeEntryInput = Pick<
   | "body_text"
 >;
 
+export interface SubjectProfile {
+  subject: string;
+  overview: string | null;
+  course_outline: string | null;
+  frameworks: string | null;
+  revision_highlights: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type SubjectProfileInput = Pick<
+  SubjectProfile,
+  "subject" | "overview" | "course_outline" | "frameworks" | "revision_highlights"
+>;
+
+export interface SubjectProfileFormState {
+  error: string | null;
+}
+
 export const UNSORTED_LABEL = "Unsorted";
 
 export interface EntryFormState {
