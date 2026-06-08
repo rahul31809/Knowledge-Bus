@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { PencilIcon } from "lucide-react";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { SessionCard } from "@/components/session-card";
+import { SubjectDriveFiles, SubjectDriveFilesSkeleton } from "@/components/subject-drive-files";
 import { buttonVariants } from "@/components/ui/button";
 import { fetchSessions, fetchSubjectProfile } from "@/lib/queries";
 import { UNSORTED_LABEL, type SubjectProfile } from "@/lib/types";
@@ -72,6 +74,12 @@ export default async function SubjectPage({ params }: { params: Promise<{ subjec
         >
           No course overview, outline, frameworks, or revision highlights yet — add subject info.
         </Link>
+      ) : null}
+
+      {canEditInfo ? (
+        <Suspense fallback={<SubjectDriveFilesSkeleton />}>
+          <SubjectDriveFiles subject={subject} />
+        </Suspense>
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

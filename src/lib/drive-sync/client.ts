@@ -58,3 +58,83 @@ export async function exportDocAsText(drive: drive_v3.Drive, fileId: string): Pr
   const res = await drive.files.export({ fileId, mimeType: "text/plain" }, { responseType: "text" });
   return String(res.data);
 }
+
+export interface DriveFileEntry {
+  id: string;
+  name: string;
+  mimeType: string;
+  webViewLink: string;
+}
+
+export interface DriveFileGroup {
+  // null = files sitting directly in the subject folder (not inside a subfolder)
+  folderName: string | null;
+  files: DriveFileEntry[];
+}
+
+function isMasterNotesDoc(name: string, mimeType: string): boolean {
+  return mimeType === DOC_MIME && name.includes("Master Notes");
+}
+
+interface DriveChild {
+  id: string;
+  name: string;
+  mimeType: string;
+  webViewLink?: string | null;
+}
+
+async function listFolderChildren(drive: drive_v3.Drive, folderId: string): Promise<DriveChild[]> {
+  const res = await drive.files.list({
+    q: `'${folderId}' in parents and trashed = false`,
+    fields: "files(id, name, mimeType, webViewLink)",
+    orderBy: "folder,name",
+    pageSize: 200,
+  });
+
+  return (res.data.files ?? []).filter((f): f is DriveChild => Boolean(f.id && f.name && f.mimeType));
+}
+
+function toFileEntries(children: DriveChild[]): DriveFileEntry[] {
+  return children
+    .filter((c) => c.mimeType !== FOLDER_MIME && c.webViewLink && !isMasterNotesDoc(c.name, c.mimeType))
+    .map((c) => ({ id: c.id, name: c.name, mimeType: c.mimeType, webViewLink: c.webViewLink as string }));
+}
+
+// Mirrors the user's own Drive folder structure: files directly in the subject
+// folder, plus one level of subfolders (e.g. "Pre-Reads", "PPTs", "Cases") —
+// each rendered as its own group. Master Notes docs are excluded since those
+// already surface as synced session notes.
+export async function listSubjectFiles(drive: drive_v3.Drive, subjectFolderId: string): Promise<DriveFileGroup[]> {
+  const children = await listFolderChildren(drive, subjectFolderId);
+  const groups: DriveFileGroup[] = [];
+
+  const topLevelFiles = toFileEntries(children);
+  if (topLevelFiles.length > 0) groups.push({ folderName: null, files: topLevelFiles });
+
+  const subfolders = children.filter((c) => c.mimeType === FOLDER_MIME);
+  for (const folder of subfolders) {
+    const folderChildren = await listFolderChildren(drive, folder.id);
+    const files = toFileEntries(folderChildren);
+    if (files.length > 0) groups.push({ folderName: folder.name, files });
+  }
+
+  return groups;
+}
+
+// Returns null when Drive isn't configured or the subject has no matching
+// Drive folder — callers should treat that as "nothing to show", not an error.
+export async function fetchSubjectDriveFiles(subject: string): Promise<DriveFileGroup[] | null> {
+  const rootFolderId = process.env.DRIVE_SUBJECTS_ROOT_FOLDER_ID;
+  if (!rootFolderId || !process.env.GOOGLE_SERVICE_ACCOUNT_JSON) return null;
+
+  try {
+    const drive = getDriveClient();
+    const subfolders = await listSubfolders(drive, rootFolderId);
+    const folder = subfolders.find((f) => f.name === subject);
+    if (!folder) return null;
+
+    return await listSubjectFiles(drive, folder.id);
+  } catch {
+    return null;
+  }
+}
