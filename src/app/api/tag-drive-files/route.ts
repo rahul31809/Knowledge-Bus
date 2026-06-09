@@ -81,6 +81,9 @@ export async function GET(request: Request) {
         const content = await extractFileContent(drive, file);
         const tags = await generateTagsForFile(file, content);
 
+        // Stay within Gemini free tier (15 req/min) — 4 s gap = ~15 RPM max
+        await new Promise((resolve) => setTimeout(resolve, 4000));
+
         const { error } = await supabase.from("drive_file_tags").upsert({
           file_id: file.id,
           subject: folder.name,
