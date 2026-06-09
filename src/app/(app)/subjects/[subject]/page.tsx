@@ -5,7 +5,7 @@ import { Breadcrumbs } from "@/components/breadcrumbs";
 import { SessionCard } from "@/components/session-card";
 import { SubjectDriveFiles } from "@/components/subject-drive-files";
 import { buttonVariants } from "@/components/ui/button";
-import { fetchSubjectDriveResources } from "@/lib/drive-sync/client";
+import { fetchSubjectDriveResources, type SubjectDriveLookup } from "@/lib/drive-sync/client";
 import { fetchDriveFileTagsForSubject, fetchSessions, fetchSubjectProfile } from "@/lib/queries";
 import { UNSORTED_LABEL, type SubjectProfile } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
@@ -27,10 +27,12 @@ export default async function SubjectPage({ params }: { params: Promise<{ subjec
 
   const supabase = await createClient();
   const [sessions, profile, drive, driveTags] = await Promise.all([
-    fetchSessions(supabase, subject),
-    fetchSubjectProfile(supabase, subject),
-    fetchSubjectDriveResources(subject),
-    fetchDriveFileTagsForSubject(supabase, subject),
+    fetchSessions(supabase, subject).catch(() => [] as Awaited<ReturnType<typeof fetchSessions>>),
+    fetchSubjectProfile(supabase, subject).catch(() => null),
+    fetchSubjectDriveResources(subject).catch(
+      (): SubjectDriveLookup => ({ status: "unavailable" })
+    ),
+    fetchDriveFileTagsForSubject(supabase, subject).catch(() => [] as Awaited<ReturnType<typeof fetchDriveFileTagsForSubject>>),
   ]);
 
   // A subject is real if it has synced notes OR a matching Drive folder.

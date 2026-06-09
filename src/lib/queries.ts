@@ -135,10 +135,9 @@ export async function fetchDriveFileTagsForSubject(
   subject: string
 ): Promise<DriveFileTag[]> {
   const { data, error } = await supabase.from("drive_file_tags").select("*").eq("subject", subject);
-  if (error) {
-    if (error.code === "42P01") return [];
-    throw error;
-  }
+  // Treat any DB error as "no tags yet" — table may not exist (42P01) or migration
+  // may not have run yet. Never crash the subject page over missing tag data.
+  if (error) return [];
   return (data ?? []) as DriveFileTag[];
 }
 
@@ -155,9 +154,7 @@ export async function searchDriveFiles(
     supabase.from("drive_file_tags").select("*").ilike("file_name", `%${q}%`).order("subject"),
   ]);
 
-  if (byTag.error?.code === "42P01" || byName.error?.code === "42P01") return [];
-  if (byTag.error) throw byTag.error;
-  if (byName.error) throw byName.error;
+  if (byTag.error || byName.error) return [];
 
   // Merge, deduplicate, keeping tag matches first
   const seen = new Set<string>();

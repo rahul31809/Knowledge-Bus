@@ -78,7 +78,7 @@ export default async function BrowsePage({
 
   const [subjects, driveSubjectNames, briefingEntries] = await Promise.all([
     fetchSubjects(supabase),
-    fetchDriveSubjectNames(),
+    fetchDriveSubjectNames().catch(() => null),
     fetchEntries(supabase, { excludeType: "study_notes" }),
   ]);
 
