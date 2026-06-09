@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import type { drive_v3 } from "googleapis";
 import type { DriveFileEntry } from "./client";
 
@@ -45,8 +45,7 @@ export async function generateTagsForFile(file: DriveFileEntry, content: string)
   const apiKey = process.env.GOOGLE_AI_API_KEY;
   if (!apiKey) return [];
 
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const ai = new GoogleGenAI({ apiKey });
 
   const contentSection = content.trim() ? `\n\nContent excerpt:\n${content.trim()}` : "";
 
@@ -65,8 +64,11 @@ Rules: lowercase, use hyphens for multi-word tags, no generic tags like "documen
 Output ONLY a valid JSON array of strings, nothing else.
 Example: ["strategy", "porter-five-forces", "case-study", "competitive-advantage", "industry-analysis"]`;
 
-  const result = await model.generateContent(prompt);
-  const text = result.response.text();
+  const result = await ai.models.generateContent({
+    model: "gemini-2.0-flash",
+    contents: prompt,
+  });
+  const text = result.text ?? "";
   const match = text.match(/\[[\s\S]*?\]/);
   if (!match) return [];
 
