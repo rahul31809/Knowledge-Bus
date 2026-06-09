@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { createClient as createSessionClient } from "@/lib/supabase/server";
 import { getDriveClient, listSubfolders, listSubjectFiles, type DriveFileEntry } from "@/lib/drive-sync/client";
 import { extractFileContent, generateTagsForFile } from "@/lib/drive-sync/tagger";
 
@@ -18,9 +19,15 @@ interface FileResult {
 
 export async function GET(request: Request) {
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret) {
-    const authHeader = request.headers.get("authorization");
-    if (authHeader !== `Bearer ${cronSecret}`) {
+  const authHeader = request.headers.get("authorization");
+
+  if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
+    // Called by cron or curl with the secret — allowed
+  } else {
+    // Fall back to checking for a logged-in browser session
+    const session = await createSessionClient();
+    const { data: { user } } = await session.auth.getUser();
+    if (!user) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
   }
