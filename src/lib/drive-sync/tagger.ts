@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { drive_v3 } from "googleapis";
 import type { DriveFileEntry } from "./client";
 
@@ -42,7 +42,11 @@ export async function extractFileContent(drive: drive_v3.Drive, file: DriveFileE
 }
 
 export async function generateTagsForFile(file: DriveFileEntry, content: string): Promise<string[]> {
-  const anthropic = new Anthropic();
+  const apiKey = process.env.GOOGLE_AI_API_KEY;
+  if (!apiKey) return [];
+
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
   const contentSection = content.trim() ? `\n\nContent excerpt:\n${content.trim()}` : "";
 
@@ -61,13 +65,8 @@ Rules: lowercase, use hyphens for multi-word tags, no generic tags like "documen
 Output ONLY a valid JSON array of strings, nothing else.
 Example: ["strategy", "porter-five-forces", "case-study", "competitive-advantage", "industry-analysis"]`;
 
-  const msg = await anthropic.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 256,
-    messages: [{ role: "user", content: prompt }],
-  });
-
-  const text = (msg.content[0] as { type: string; text: string }).text;
+  const result = await model.generateContent(prompt);
+  const text = result.response.text();
   const match = text.match(/\[[\s\S]*?\]/);
   if (!match) return [];
 

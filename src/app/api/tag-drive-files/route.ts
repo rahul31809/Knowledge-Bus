@@ -32,8 +32,8 @@ export async function GET(request: Request) {
   if (!rootFolderId || !supabaseUrl || !serviceRoleKey || !process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
     return NextResponse.json({ ok: false, error: "Drive is not configured" }, { status: 500 });
   }
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return NextResponse.json({ ok: false, error: "ANTHROPIC_API_KEY is not set" }, { status: 500 });
+  if (!process.env.GOOGLE_AI_API_KEY) {
+    return NextResponse.json({ ok: false, error: "GOOGLE_AI_API_KEY is not set" }, { status: 500 });
   }
 
   const drive = getDriveClient();
