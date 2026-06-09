@@ -15,11 +15,7 @@ export function NavHeader({ userEmail }: { userEmail: string | null }) {
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = query.trim();
-    if (trimmed) {
-      router.push(`/?q=${encodeURIComponent(trimmed)}`);
-    } else {
-      router.push("/");
-    }
+    router.push(trimmed ? `/search?q=${encodeURIComponent(trimmed)}` : "/search");
   }
 
   return (
@@ -32,6 +28,9 @@ export function NavHeader({ userEmail }: { userEmail: string | null }) {
           <nav className="flex items-center gap-4 text-sm">
             <Link href="/" className="text-neutral-600 hover:text-neutral-900">
               Browse
+            </Link>
+            <Link href="/search" className="text-neutral-600 hover:text-neutral-900">
+              Search
             </Link>
             <Link href="/entries/new" className="text-neutral-600 hover:text-neutral-900">
               Add Entry

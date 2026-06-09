@@ -6,7 +6,7 @@ import { SessionCard } from "@/components/session-card";
 import { SubjectDriveFiles } from "@/components/subject-drive-files";
 import { buttonVariants } from "@/components/ui/button";
 import { fetchSubjectDriveResources } from "@/lib/drive-sync/client";
-import { fetchSessions, fetchSubjectProfile } from "@/lib/queries";
+import { fetchDriveFileTagsForSubject, fetchSessions, fetchSubjectProfile } from "@/lib/queries";
 import { UNSORTED_LABEL, type SubjectProfile } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
 
@@ -26,10 +26,11 @@ export default async function SubjectPage({ params }: { params: Promise<{ subjec
   const subject = decodeURIComponent(subjectParam);
 
   const supabase = await createClient();
-  const [sessions, profile, drive] = await Promise.all([
+  const [sessions, profile, drive, driveTags] = await Promise.all([
     fetchSessions(supabase, subject),
     fetchSubjectProfile(supabase, subject),
     fetchSubjectDriveResources(subject),
+    fetchDriveFileTagsForSubject(supabase, subject),
   ]);
 
   // A subject is real if it has synced notes OR a matching Drive folder.
@@ -38,6 +39,7 @@ export default async function SubjectPage({ params }: { params: Promise<{ subjec
   if (sessions.length === 0 && drive.status !== "found") notFound();
 
   const driveFiles = drive.status === "found" ? drive.files : null;
+  const tagMap = new Map(driveTags.map((t) => [t.file_id, t.tags]));
 
   const sections = PROFILE_SECTIONS.map((section) => ({ ...section, value: profile?.[section.key] as string | null }))
     .filter((section) => section.value);
@@ -82,7 +84,7 @@ export default async function SubjectPage({ params }: { params: Promise<{ subjec
         </Link>
       ) : null}
 
-      {canEditInfo ? <SubjectDriveFiles groups={driveFiles} /> : null}
+      {canEditInfo ? <SubjectDriveFiles groups={driveFiles} tagMap={tagMap} /> : null}
 
       {sessions.length > 0 ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

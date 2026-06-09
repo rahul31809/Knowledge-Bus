@@ -64,6 +64,7 @@ export interface DriveFileEntry {
   name: string;
   mimeType: string;
   webViewLink: string;
+  modifiedTime?: string;
 }
 
 export interface DriveFileGroup {
@@ -72,21 +73,18 @@ export interface DriveFileGroup {
   files: DriveFileEntry[];
 }
 
-function isMasterNotesDoc(name: string, mimeType: string): boolean {
-  return mimeType === DOC_MIME && name.includes("Master Notes");
-}
-
 interface DriveChild {
   id: string;
   name: string;
   mimeType: string;
   webViewLink?: string | null;
+  modifiedTime?: string | null;
 }
 
 async function listFolderChildren(drive: drive_v3.Drive, folderId: string): Promise<DriveChild[]> {
   const res = await drive.files.list({
     q: `'${folderId}' in parents and trashed = false`,
-    fields: "files(id, name, mimeType, webViewLink)",
+    fields: "files(id, name, mimeType, webViewLink, modifiedTime)",
     orderBy: "folder,name",
     pageSize: 200,
   });
@@ -96,8 +94,14 @@ async function listFolderChildren(drive: drive_v3.Drive, folderId: string): Prom
 
 function toFileEntries(children: DriveChild[]): DriveFileEntry[] {
   return children
-    .filter((c) => c.mimeType !== FOLDER_MIME && c.webViewLink && !isMasterNotesDoc(c.name, c.mimeType))
-    .map((c) => ({ id: c.id, name: c.name, mimeType: c.mimeType, webViewLink: c.webViewLink as string }));
+    .filter((c) => c.mimeType !== FOLDER_MIME && c.webViewLink)
+    .map((c) => ({
+      id: c.id,
+      name: c.name,
+      mimeType: c.mimeType,
+      webViewLink: c.webViewLink as string,
+      modifiedTime: c.modifiedTime ?? undefined,
+    }));
 }
 
 // Mirrors the user's own Drive folder structure: files directly in the subject

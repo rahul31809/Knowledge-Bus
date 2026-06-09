@@ -1,5 +1,5 @@
 import type { createClient } from "@/lib/supabase/server";
-import { UNSORTED_LABEL, type KnowledgeEntry, type SubjectProfile } from "./types";
+import { UNSORTED_LABEL, type DriveFileTag, type KnowledgeEntry, type SubjectProfile } from "./types";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -128,6 +128,47 @@ export async function fetchSubjectProfile(
     throw error;
   }
   return data as SubjectProfile | null;
+}
+
+export async function fetchDriveFileTagsForSubject(
+  supabase: SupabaseServerClient,
+  subject: string
+): Promise<DriveFileTag[]> {
+  const { data, error } = await supabase.from("drive_file_tags").select("*").eq("subject", subject);
+  if (error) {
+    if (error.code === "42P01") return [];
+    throw error;
+  }
+  return (data ?? []) as DriveFileTag[];
+}
+
+export async function searchDriveFiles(
+  supabase: SupabaseServerClient,
+  query: string
+): Promise<DriveFileTag[]> {
+  const q = query.trim();
+  if (!q) return [];
+
+  // Run both searches in parallel: exact tag containment and partial filename match
+  const [byTag, byName] = await Promise.all([
+    supabase.from("drive_file_tags").select("*").contains("tags", [q.toLowerCase()]).order("subject"),
+    supabase.from("drive_file_tags").select("*").ilike("file_name", `%${q}%`).order("subject"),
+  ]);
+
+  if (byTag.error?.code === "42P01" || byName.error?.code === "42P01") return [];
+  if (byTag.error) throw byTag.error;
+  if (byName.error) throw byName.error;
+
+  // Merge, deduplicate, keeping tag matches first
+  const seen = new Set<string>();
+  const merged: DriveFileTag[] = [];
+  for (const row of [...(byTag.data ?? []), ...(byName.data ?? [])]) {
+    if (!seen.has(row.file_id)) {
+      seen.add(row.file_id);
+      merged.push(row as DriveFileTag);
+    }
+  }
+  return merged;
 }
 
 export async function fetchEntriesBySession(

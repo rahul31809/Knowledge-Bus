@@ -63,6 +63,17 @@ export interface SubjectProfileFormState {
   error: string | null;
 }
 
+export interface DriveFileTag {
+  file_id: string;
+  subject: string;
+  file_name: string;
+  mime_type: string;
+  web_view_link: string;
+  tags: string[];
+  drive_modified_time: string | null;
+  tagged_at: string;
+}
+
 export const UNSORTED_LABEL = "Unsorted";
 
 export interface EntryFormState {
