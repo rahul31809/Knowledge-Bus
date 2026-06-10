@@ -122,36 +122,39 @@ async function listFilesRecursive(
   return groups;
 }
 
-// Subject folders live at most 2 levels below the Subjects root: either
-// directly (e.g. "Case Study Prep"), or one level inside a category folder
-// that groups several courses (e.g. "PGPM Foundation" containing "MCEP",
-// "SOS", "BGIE"). Anything deeper than that — "Pre Reads", "PPTs", etc. —
-// is course content, not another subject, and is left for listSubjectFiles
-// to pick up as a folder group.
-const MAX_SUBJECT_DEPTH = 2;
-
-// A folder with subfolders of its own is a category — recurse one level to
-// find the real subject folders. A folder with no subfolders is always a
-// subject (even if currently empty, so a freshly created course folder shows
-// up right away). At MAX_SUBJECT_DEPTH, every folder is treated as a subject
-// regardless of its own contents — its subfolders become file groups instead.
-async function resolveSubjectFolders(drive: drive_v3.Drive, folderId: string, folderName: string, depth: number): Promise<DriveFolder[]> {
-  if (depth >= MAX_SUBJECT_DEPTH) return [{ id: folderId, name: folderName }];
-
-  const children = await listFolderChildren(drive, folderId);
-  const subfolders = children.filter((c) => c.mimeType === FOLDER_MIME);
-
-  if (subfolders.length === 0) return [{ id: folderId, name: folderName }];
-
-  const nested = await Promise.all(subfolders.map((f) => resolveSubjectFolders(drive, f.id, f.name, depth + 1)));
-  return nested.flat();
-}
+// Folders directly under the Subjects root that are pure groupers — each
+// of their children is a course folder (a subject), e.g. "PGPM Foundation"
+// contains "MCEP", "SOS", "BGIE", etc. Every other folder in the tree —
+// root-level or nested one level inside a category — is a subject as soon
+// as it's reached, whatever it contains. Course folders hold content
+// subfolders (Pre Reads, PPTs, Books, Group Assignment, ...) whose names
+// vary per course, so those are never treated as subjects; listSubjectFiles
+// picks them up as folder groups instead.
+//
+// When a new category folder is added (e.g. for a future term), add its
+// exact name here.
+const CATEGORY_FOLDER_NAMES = new Set([
+  "PGPM Foundation",
+  "PGPM Core Foundation",
+  "PGPM Pre Foundation",
+  "PGPM Leadership, Innovation & Change",
+]);
 
 export async function listSubjectFolders(drive: drive_v3.Drive, rootFolderId: string): Promise<DriveFolder[]> {
   const rootChildren = await listFolderChildren(drive, rootFolderId);
   const rootSubfolders = rootChildren.filter((c) => c.mimeType === FOLDER_MIME);
-  const nested = await Promise.all(rootSubfolders.map((f) => resolveSubjectFolders(drive, f.id, f.name, 1)));
-  return nested.flat();
+
+  const result: DriveFolder[] = [];
+  for (const folder of rootSubfolders) {
+    if (CATEGORY_FOLDER_NAMES.has(folder.name)) {
+      const children = await listFolderChildren(drive, folder.id);
+      const courseFolders = children.filter((c) => c.mimeType === FOLDER_MIME);
+      result.push(...courseFolders.map((f) => ({ id: f.id, name: f.name })));
+    } else {
+      result.push({ id: folder.id, name: folder.name });
+    }
+  }
+  return result;
 }
 
 export type SubjectDriveLookup =
