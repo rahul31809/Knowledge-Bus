@@ -16,8 +16,13 @@ Four primary sections, dashboard layout with sidebar nav:
 
 ## 1. Subjects module
 
-Source: Google Drive folder "PGPM Leadership, Innovation & Change" (multiple
-subject folders inside).
+Source: Drive Subjects root folder. Auto-discovered (shipped 2026-06-11):
+folders named in a fixed category list ("PGPM Foundation", "PGPM Core
+Foundation", "PGPM Pre Foundation", "PGPM Leadership, Innovation & Change")
+are recursed one level for their course folders; every other folder under
+the root (standalone subjects like "Case Study Prep", "Wise Tech", etc.) is
+a subject directly. New category folders (future terms) just need their
+name added to that list.
 
 Navigation: Home → Subjects → Subject List → Individual Subject Page → Sessions
 
@@ -31,6 +36,10 @@ Each **Subject Page** should contain:
 - Session summaries
 - Important frameworks
 - Revision highlights
+
+**Files in Drive** (shipped 2026-06-11): renders each subject's Drive files
+as a collapsible folder tree, mirroring nested subfolders (e.g. Pre Reads →
+Session 1&2) instead of a flat list.
 
 Each **Session** should display:
 - Session number, date, topic
