@@ -122,32 +122,35 @@ async function listFilesRecursive(
   return groups;
 }
 
-// Recursively finds every "subject" folder under the Subjects root. A folder
-// with no subfolders of its own is always a subject (even if currently
-// empty, so a freshly created course folder shows up right away). A folder
-// that contains subfolders is treated as a category — e.g. "PGPM Foundation"
-// grouping "MCEP", "SOS", "BGIE" — and its subfolders are recursed into
-// instead; if it *also* has files sitting directly inside it, it's
-// additionally listed as its own subject.
-async function resolveSubjectFolders(drive: drive_v3.Drive, folderId: string, folderName: string): Promise<DriveFolder[]> {
+// Subject folders live at most 2 levels below the Subjects root: either
+// directly (e.g. "Case Study Prep"), or one level inside a category folder
+// that groups several courses (e.g. "PGPM Foundation" containing "MCEP",
+// "SOS", "BGIE"). Anything deeper than that — "Pre Reads", "PPTs", etc. —
+// is course content, not another subject, and is left for listSubjectFiles
+// to pick up as a folder group.
+const MAX_SUBJECT_DEPTH = 2;
+
+// A folder with subfolders of its own is a category — recurse one level to
+// find the real subject folders. A folder with no subfolders is always a
+// subject (even if currently empty, so a freshly created course folder shows
+// up right away). At MAX_SUBJECT_DEPTH, every folder is treated as a subject
+// regardless of its own contents — its subfolders become file groups instead.
+async function resolveSubjectFolders(drive: drive_v3.Drive, folderId: string, folderName: string, depth: number): Promise<DriveFolder[]> {
+  if (depth >= MAX_SUBJECT_DEPTH) return [{ id: folderId, name: folderName }];
+
   const children = await listFolderChildren(drive, folderId);
   const subfolders = children.filter((c) => c.mimeType === FOLDER_MIME);
 
   if (subfolders.length === 0) return [{ id: folderId, name: folderName }];
 
-  const nested = await Promise.all(subfolders.map((f) => resolveSubjectFolders(drive, f.id, f.name)));
-  const result = nested.flat();
-
-  const hasFiles = children.some((c) => c.mimeType !== FOLDER_MIME);
-  if (hasFiles) result.push({ id: folderId, name: folderName });
-
-  return result;
+  const nested = await Promise.all(subfolders.map((f) => resolveSubjectFolders(drive, f.id, f.name, depth + 1)));
+  return nested.flat();
 }
 
 export async function listSubjectFolders(drive: drive_v3.Drive, rootFolderId: string): Promise<DriveFolder[]> {
   const rootChildren = await listFolderChildren(drive, rootFolderId);
   const rootSubfolders = rootChildren.filter((c) => c.mimeType === FOLDER_MIME);
-  const nested = await Promise.all(rootSubfolders.map((f) => resolveSubjectFolders(drive, f.id, f.name)));
+  const nested = await Promise.all(rootSubfolders.map((f) => resolveSubjectFolders(drive, f.id, f.name, 1)));
   return nested.flat();
 }
 
