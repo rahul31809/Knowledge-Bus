@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient as createSessionClient } from "@/lib/supabase/server";
-import { getDriveClient, listSubfolders, listSubjectFiles, type DriveFileEntry } from "@/lib/drive-sync/client";
+import { getDriveClient, listSubjectFolders, listSubjectFiles, type DriveFileEntry } from "@/lib/drive-sync/client";
 import { extractFileContent, generateTagsForFile } from "@/lib/drive-sync/tagger";
 
 // Allow up to 5 minutes — processing many files with content extraction + AI calls
@@ -52,7 +52,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const targetSubject = url.searchParams.get("subject");
 
-  const subjectFolders = await listSubfolders(drive, rootFolderId);
+  const subjectFolders = await listSubjectFolders(drive, rootFolderId);
   const results: { subject: string; files: FileResult[] }[] = [];
 
   for (const folder of subjectFolders) {
@@ -68,11 +68,20 @@ export async function GET(request: Request) {
         if (file.modifiedTime) {
           const { data: existing } = await supabase
             .from("drive_file_tags")
-            .select("drive_modified_time")
+            .select("drive_modified_time, subject")
             .eq("file_id", file.id)
             .maybeSingle();
 
           if (existing?.drive_modified_time === file.modifiedTime) {
+            // Content unchanged, but the file may have been re-filed under a
+            // different subject folder since it was last tagged — fix that
+            // up without burning a Gemini call.
+            if (existing.subject !== folder.name) {
+              await supabase
+                .from("drive_file_tags")
+                .update({ subject: folder.name, file_name: file.name, web_view_link: file.webViewLink })
+                .eq("file_id", file.id);
+            }
             fileResults.push({ fileId: file.id, fileName: file.name, status: "unchanged" });
             continue;
           }

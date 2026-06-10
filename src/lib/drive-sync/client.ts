@@ -20,18 +20,6 @@ export interface DriveFolder {
   name: string;
 }
 
-export async function listSubfolders(drive: drive_v3.Drive, parentId: string): Promise<DriveFolder[]> {
-  const res = await drive.files.list({
-    q: `'${parentId}' in parents and mimeType = '${FOLDER_MIME}' and trashed = false`,
-    fields: "files(id, name)",
-    pageSize: 100,
-  });
-
-  return (res.data.files ?? [])
-    .filter((f): f is drive_v3.Schema$File & { id: string; name: string } => Boolean(f.id && f.name))
-    .map((f) => ({ id: f.id, name: f.name }));
-}
-
 export interface DriveDoc {
   id: string;
   name: string;
@@ -68,7 +56,9 @@ export interface DriveFileEntry {
 }
 
 export interface DriveFileGroup {
-  // null = files sitting directly in the subject folder (not inside a subfolder)
+  // null = files sitting directly in the subject folder; otherwise the
+  // subfolder path relative to the subject folder, e.g. "Pre-Reads" or
+  // "Pre-Reads/Week 1" for nested subfolders.
   folderName: string | null;
   files: DriveFileEntry[];
 }
@@ -104,25 +94,61 @@ function toFileEntries(children: DriveChild[]): DriveFileEntry[] {
     }));
 }
 
-// Mirrors the user's own Drive folder structure: files directly in the subject
-// folder, plus one level of subfolders (e.g. "Pre-Reads", "PPTs", "Cases") —
-// each rendered as its own group. Master Notes docs are excluded since those
-// already surface as synced session notes.
+// Recursively lists every file under a subject folder, however deeply
+// nested. Each group's folderName is the subfolder path relative to the
+// subject folder (e.g. "Pre-Reads/Week 1"), or null for files sitting
+// directly in the subject folder.
 export async function listSubjectFiles(drive: drive_v3.Drive, subjectFolderId: string): Promise<DriveFileGroup[]> {
-  const children = await listFolderChildren(drive, subjectFolderId);
+  return listFilesRecursive(drive, subjectFolderId, null);
+}
+
+async function listFilesRecursive(
+  drive: drive_v3.Drive,
+  folderId: string,
+  pathPrefix: string | null
+): Promise<DriveFileGroup[]> {
+  const children = await listFolderChildren(drive, folderId);
   const groups: DriveFileGroup[] = [];
 
-  const topLevelFiles = toFileEntries(children);
-  if (topLevelFiles.length > 0) groups.push({ folderName: null, files: topLevelFiles });
+  const files = toFileEntries(children);
+  if (files.length > 0) groups.push({ folderName: pathPrefix, files });
 
   const subfolders = children.filter((c) => c.mimeType === FOLDER_MIME);
   for (const folder of subfolders) {
-    const folderChildren = await listFolderChildren(drive, folder.id);
-    const files = toFileEntries(folderChildren);
-    if (files.length > 0) groups.push({ folderName: folder.name, files });
+    const childPath = pathPrefix ? `${pathPrefix}/${folder.name}` : folder.name;
+    groups.push(...(await listFilesRecursive(drive, folder.id, childPath)));
   }
 
   return groups;
+}
+
+// Recursively finds every "subject" folder under the Subjects root. A folder
+// with no subfolders of its own is always a subject (even if currently
+// empty, so a freshly created course folder shows up right away). A folder
+// that contains subfolders is treated as a category — e.g. "PGPM Foundation"
+// grouping "MCEP", "SOS", "BGIE" — and its subfolders are recursed into
+// instead; if it *also* has files sitting directly inside it, it's
+// additionally listed as its own subject.
+async function resolveSubjectFolders(drive: drive_v3.Drive, folderId: string, folderName: string): Promise<DriveFolder[]> {
+  const children = await listFolderChildren(drive, folderId);
+  const subfolders = children.filter((c) => c.mimeType === FOLDER_MIME);
+
+  if (subfolders.length === 0) return [{ id: folderId, name: folderName }];
+
+  const nested = await Promise.all(subfolders.map((f) => resolveSubjectFolders(drive, f.id, f.name)));
+  const result = nested.flat();
+
+  const hasFiles = children.some((c) => c.mimeType !== FOLDER_MIME);
+  if (hasFiles) result.push({ id: folderId, name: folderName });
+
+  return result;
+}
+
+export async function listSubjectFolders(drive: drive_v3.Drive, rootFolderId: string): Promise<DriveFolder[]> {
+  const rootChildren = await listFolderChildren(drive, rootFolderId);
+  const rootSubfolders = rootChildren.filter((c) => c.mimeType === FOLDER_MIME);
+  const nested = await Promise.all(rootSubfolders.map((f) => resolveSubjectFolders(drive, f.id, f.name)));
+  return nested.flat();
 }
 
 export type SubjectDriveLookup =
@@ -141,8 +167,8 @@ export async function fetchSubjectDriveResources(subject: string): Promise<Subje
 
   try {
     const drive = getDriveClient();
-    const subfolders = await listSubfolders(drive, rootFolderId);
-    const folder = subfolders.find((f) => f.name === subject);
+    const subjectFolders = await listSubjectFolders(drive, rootFolderId);
+    const folder = subjectFolders.find((f) => f.name === subject);
     if (!folder) return { status: "not_found" };
 
     const files = await listSubjectFiles(drive, folder.id);
@@ -161,8 +187,8 @@ export async function fetchDriveSubjectNames(): Promise<string[] | null> {
 
   try {
     const drive = getDriveClient();
-    const subfolders = await listSubfolders(drive, rootFolderId);
-    return subfolders.map((f) => f.name);
+    const subjectFolders = await listSubjectFolders(drive, rootFolderId);
+    return subjectFolders.map((f) => f.name);
   } catch {
     return null;
   }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-import { exportDocAsText, findMasterNotesDoc, getDriveClient, listSubfolders } from "@/lib/drive-sync/client";
+import { exportDocAsText, findMasterNotesDoc, getDriveClient, listSubjectFolders } from "@/lib/drive-sync/client";
 import { parseSessionBlocks, plainTextToHtml } from "@/lib/drive-sync/parser";
 import { sanitizeBodyHtml, htmlToPlainText } from "@/lib/sanitize";
 
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     auth: { persistSession: false },
   });
 
-  const subjectFolders = await listSubfolders(drive, rootFolderId);
+  const subjectFolders = await listSubjectFolders(drive, rootFolderId);
   const results: SubjectSyncResult[] = [];
 
   for (const folder of subjectFolders) {
