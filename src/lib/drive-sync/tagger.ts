@@ -7,36 +7,40 @@ const GOOGLE_SLIDES_MIME = "application/vnd.google-apps.presentation";
 const PDF_MIME = "application/pdf";
 const MAX_CONTENT_CHARS = 4000;
 
-async function exportGoogleWorkspaceAsText(drive: drive_v3.Drive, fileId: string): Promise<string> {
+async function exportGoogleWorkspaceAsText(drive: drive_v3.Drive, fileId: string, maxChars: number): Promise<string> {
   try {
     const res = await drive.files.export({ fileId, mimeType: "text/plain" }, { responseType: "text" });
-    return String(res.data).slice(0, MAX_CONTENT_CHARS);
+    return String(res.data).slice(0, maxChars);
   } catch {
     return "";
   }
 }
 
-async function extractPdfText(drive: drive_v3.Drive, fileId: string): Promise<string> {
+async function extractPdfText(drive: drive_v3.Drive, fileId: string, maxChars: number): Promise<string> {
   try {
     const res = await drive.files.get({ fileId, alt: "media" }, { responseType: "arraybuffer" });
     // Dynamic import keeps pdf-parse out of the module graph until needed,
     // preventing its test-file side-effect from running at build time.
-    const pdfMod = await import("pdf-parse");
-    // ESM build exports the callable directly — cast to avoid type mismatch
-    const parse = pdfMod as unknown as (buf: Buffer) => Promise<{ text: string }>;
-    const data = await parse(Buffer.from(res.data as ArrayBuffer));
-    return data.text.slice(0, MAX_CONTENT_CHARS);
+    const { PDFParse } = await import("pdf-parse");
+    const parser = new PDFParse({ data: new Uint8Array(res.data as ArrayBuffer) });
+    const result = await parser.getText();
+    await parser.destroy();
+    return result.text.slice(0, maxChars);
   } catch {
     return "";
   }
 }
 
-export async function extractFileContent(drive: drive_v3.Drive, file: DriveFileEntry): Promise<string> {
+export async function extractFileContent(
+  drive: drive_v3.Drive,
+  file: DriveFileEntry,
+  maxChars: number = MAX_CONTENT_CHARS
+): Promise<string> {
   if (file.mimeType === GOOGLE_DOC_MIME || file.mimeType === GOOGLE_SLIDES_MIME) {
-    return exportGoogleWorkspaceAsText(drive, file.id);
+    return exportGoogleWorkspaceAsText(drive, file.id, maxChars);
   }
   if (file.mimeType === PDF_MIME) {
-    return extractPdfText(drive, file.id);
+    return extractPdfText(drive, file.id, maxChars);
   }
   return "";
 }
@@ -65,7 +69,7 @@ Output ONLY a valid JSON array of strings, nothing else.
 Example: ["strategy", "porter-five-forces", "case-study", "competitive-advantage", "industry-analysis"]`;
 
   const result = await ai.models.generateContent({
-    model: "gemini-2.0-flash",
+    model: "gemini-3.1-flash-lite",
     contents: prompt,
   });
   const text = result.text ?? "";
@@ -80,4 +84,31 @@ Example: ["strategy", "porter-five-forces", "case-study", "competitive-advantage
   } catch {
     return [];
   }
+}
+
+export async function generateArticleSummary(file: DriveFileEntry, content: string): Promise<string> {
+  const apiKey = process.env.GOOGLE_AI_API_KEY;
+  if (!apiKey || !content.trim()) return "";
+
+  const ai = new GoogleGenAI({ apiKey });
+
+  const prompt = `You are helping an MBA student (preparing for strategy-consulting interviews) quickly digest a saved reading.
+
+File: "${file.name}"
+
+Content excerpt (may be a full magazine issue rather than a single article):
+${content.trim()}
+
+Write a concise summary (150-250 words, plain text, no markdown headers) that:
+- Leads with the core thesis / so-what
+- Covers key facts, data points, or examples
+- Notes why this matters for business strategy or a consulting case discussion
+
+If the excerpt spans multiple articles, focus on the one matching the filename above (e.g. a "Read Article ..." hint); otherwise summarize the most prominent article in the excerpt.`;
+
+  const result = await ai.models.generateContent({
+    model: "gemini-3.1-flash-lite",
+    contents: prompt,
+  });
+  return (result.text ?? "").trim();
 }

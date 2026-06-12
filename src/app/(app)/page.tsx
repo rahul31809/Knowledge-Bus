@@ -3,8 +3,9 @@ import { buttonVariants } from "@/components/ui/button";
 import { EntryCard } from "@/components/entry-card";
 import { FilterBar } from "@/components/filter-bar";
 import { SubjectCard } from "@/components/subject-card";
+import { WordOfTheDay } from "@/components/word-of-the-day";
 import { fetchDriveSubjectNames } from "@/lib/drive-sync/client";
-import { fetchEntries, fetchSubjects, type SubjectSummary } from "@/lib/queries";
+import { fetchEntries, fetchSubjects, fetchWordOfTheDay, type SubjectSummary } from "@/lib/queries";
 import { ENTRY_TYPES } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
 
@@ -76,10 +77,11 @@ export default async function BrowsePage({
     );
   }
 
-  const [subjects, driveSubjectNames, briefingEntries] = await Promise.all([
+  const [subjects, driveSubjectNames, briefingEntries, wordOfTheDay] = await Promise.all([
     fetchSubjects(supabase),
     fetchDriveSubjectNames().catch(() => null),
     fetchEntries(supabase, { excludeType: "study_notes" }),
+    fetchWordOfTheDay(supabase).catch(() => null),
   ]);
 
   const allSubjects = withDriveOnlySubjects(subjects, driveSubjectNames);
@@ -95,6 +97,8 @@ export default async function BrowsePage({
           Add Entry
         </Link>
       </div>
+
+      {wordOfTheDay ? <WordOfTheDay word={wordOfTheDay.word} article={wordOfTheDay.article} /> : null}
 
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold text-neutral-900">Subjects</h2>

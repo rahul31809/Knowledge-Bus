@@ -72,6 +72,8 @@ export interface DriveFileTag {
   tags: string[];
   drive_modified_time: string | null;
   tagged_at: string;
+  ai_summary: string | null;
+  summary_generated_at: string | null;
 }
 
 export const UNSORTED_LABEL = "Unsorted";
