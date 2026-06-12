@@ -13,29 +13,19 @@ const MAX_CONTENT_CHARS = 4000;
 const MAX_PDF_PAGES = 30;
 
 async function exportGoogleWorkspaceAsText(drive: drive_v3.Drive, fileId: string, maxChars: number): Promise<string> {
-  try {
-    const res = await drive.files.export({ fileId, mimeType: "text/plain" }, { responseType: "text" });
-    return String(res.data).slice(0, maxChars);
-  } catch (err) {
-    console.error(`exportGoogleWorkspaceAsText failed for ${fileId}:`, err);
-    return "";
-  }
+  const res = await drive.files.export({ fileId, mimeType: "text/plain" }, { responseType: "text" });
+  return String(res.data).slice(0, maxChars);
 }
 
 async function extractPdfText(drive: drive_v3.Drive, fileId: string, maxChars: number): Promise<string> {
-  try {
-    const res = await drive.files.get({ fileId, alt: "media" }, { responseType: "arraybuffer" });
-    // Dynamic import keeps pdf-parse out of the module graph until needed,
-    // preventing its test-file side-effect from running at build time.
-    const { PDFParse } = await import("pdf-parse");
-    const parser = new PDFParse({ data: new Uint8Array(res.data as ArrayBuffer) });
-    const result = await parser.getText({ first: MAX_PDF_PAGES });
-    await parser.destroy();
-    return result.text.slice(0, maxChars);
-  } catch (err) {
-    console.error(`extractPdfText failed for ${fileId}:`, err);
-    return "";
-  }
+  const res = await drive.files.get({ fileId, alt: "media" }, { responseType: "arraybuffer" });
+  // Dynamic import keeps pdf-parse out of the module graph until needed,
+  // preventing its test-file side-effect from running at build time.
+  const { PDFParse } = await import("pdf-parse");
+  const parser = new PDFParse({ data: new Uint8Array(res.data as ArrayBuffer) });
+  const result = await parser.getText({ first: MAX_PDF_PAGES });
+  await parser.destroy();
+  return result.text.slice(0, maxChars);
 }
 
 export async function extractFileContent(

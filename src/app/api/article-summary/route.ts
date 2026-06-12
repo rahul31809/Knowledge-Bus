@@ -53,16 +53,27 @@ export async function POST(request: Request) {
   }
 
   const drive = getDriveClient();
-  const content = await extractFileContent(
-    drive,
-    { id: row.file_id, name: row.file_name, mimeType: row.mime_type, webViewLink: row.web_view_link },
-    SUMMARY_CONTENT_CHARS
-  );
+  const fileEntry = { id: row.file_id, name: row.file_name, mimeType: row.mime_type, webViewLink: row.web_view_link };
 
-  const summary = await generateArticleSummary(
-    { id: row.file_id, name: row.file_name, mimeType: row.mime_type, webViewLink: row.web_view_link },
-    content
-  );
+  let content: string;
+  try {
+    content = await extractFileContent(drive, fileEntry, SUMMARY_CONTENT_CHARS);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ ok: false, error: `Could not read file content: ${message}` }, { status: 500 });
+  }
+
+  if (!content.trim()) {
+    return NextResponse.json({ ok: false, error: "No extractable text found in this file" }, { status: 500 });
+  }
+
+  let summary: string;
+  try {
+    summary = await generateArticleSummary(fileEntry, content);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ ok: false, error: `AI summary call failed: ${message}` }, { status: 500 });
+  }
 
   if (!summary) {
     return NextResponse.json({ ok: false, error: "Could not generate a summary for this file" }, { status: 500 });
