@@ -52,6 +52,11 @@ Each **Session** should display:
 
 ## 2. Industry & Extra Learnings module
 
+> Detailed build spec: see `FutureGoal2.0.md` (Drive auto-refresh every 15
+> days, two bifurcations — Industry vs. Management & Leadership — plus email
+> newsletters, external sites, AI tagging, on-demand AI summaries, and a
+> "best 5 of the day" digest).
+
 A "knowledge intelligence hub" — main categories:
 Industry Primers, Energy Sector, Leadership, Management, Company Analysis,
 Strategy, Consulting, Policy & Regulation, Technology, Macroeconomics.
