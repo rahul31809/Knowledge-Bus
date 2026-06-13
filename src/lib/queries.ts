@@ -168,46 +168,6 @@ export async function searchDriveFiles(
   return merged;
 }
 
-// "Word of the day" is sourced only from this subject folder (and any
-// subfolders under it, e.g. "Monthly Mags/HBR", "Business Today", "The
-// Economist" — drive_file_tags.subject is always the top-level subject
-// folder name regardless of nesting, so a single equality filter covers
-// the whole subtree).
-const NEWS_SUBJECT = "News Paper and Magazines";
-
-export interface WordOfTheDay {
-  word: string;
-  article: DriveFileTag;
-}
-
-// Deterministic pick for the day: hashes today's date against the tagged
-// News Paper and Magazines files so the same word + article show all day
-// and rotate tomorrow, with no randomness or extra AI calls on page load.
-export async function fetchWordOfTheDay(supabase: SupabaseServerClient): Promise<WordOfTheDay | null> {
-  const { data, error } = await supabase.from("drive_file_tags").select("*").eq("subject", NEWS_SUBJECT);
-  if (error || !data || data.length === 0) return null;
-
-  const rows = data as DriveFileTag[];
-  const tagToFiles = new Map<string, DriveFileTag[]>();
-  for (const row of rows) {
-    for (const tag of row.tags) {
-      const list = tagToFiles.get(tag);
-      if (list) list.push(row);
-      else tagToFiles.set(tag, [row]);
-    }
-  }
-
-  const tags = [...tagToFiles.keys()].sort();
-  if (tags.length === 0) return null;
-
-  const dayIndex = Math.floor(Date.now() / 86_400_000);
-  const word = tags[dayIndex % tags.length];
-  const candidates = tagToFiles.get(word)!;
-  const article = candidates[dayIndex % candidates.length];
-
-  return { word, article };
-}
-
 export async function fetchEntriesBySession(
   supabase: SupabaseServerClient,
   subject: string,
