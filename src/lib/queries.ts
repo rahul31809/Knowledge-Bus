@@ -1,5 +1,14 @@
 import type { createClient } from "@/lib/supabase/server";
-import { UNSORTED_LABEL, type DriveFileTag, type KnowledgeEntry, type SubjectProfile } from "./types";
+import {
+  MAGAZINE_SECTIONS,
+  UNSORTED_LABEL,
+  type DriveFileTag,
+  type KnowledgeEntry,
+  type MagazineArticle,
+  type MagazineCategoryGroup,
+  type MagazineSection,
+  type SubjectProfile,
+} from "./types";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -166,6 +175,62 @@ export async function searchDriveFiles(
     }
   }
   return merged;
+}
+
+interface MagazineArticleRow {
+  id: string;
+  title: string;
+  section: string;
+  order_index: number;
+  is_read: boolean;
+  magazine_issues: {
+    source: string;
+    file_name: string;
+    web_view_link: string;
+    drive_modified_time: string | null;
+  } | null;
+}
+
+export async function fetchMagazineArticlesByCategory(supabase: SupabaseServerClient): Promise<MagazineCategoryGroup[]> {
+  const { data, error } = await supabase
+    .from("magazine_articles")
+    .select("id, title, section, order_index, is_read, magazine_issues(source, file_name, web_view_link, drive_modified_time)");
+
+  // Treat any DB error as "no data yet" — the tables may not exist until
+  // migration 0009 has run, or the scanner hasn't populated them yet.
+  if (error) return [];
+
+  const bySection = new Map<MagazineSection, { article: MagazineArticle; modifiedTime: string; orderIndex: number }[]>();
+
+  for (const row of (data ?? []) as unknown as MagazineArticleRow[]) {
+    const issue = row.magazine_issues;
+    if (!issue) continue;
+
+    const section: MagazineSection = (MAGAZINE_SECTIONS as readonly string[]).includes(row.section)
+      ? (row.section as MagazineSection)
+      : "Other";
+
+    const entries = bySection.get(section) ?? [];
+    entries.push({
+      article: {
+        id: row.id,
+        title: row.title,
+        section,
+        isRead: row.is_read,
+        webViewLink: issue.web_view_link,
+        issueLabel: `${issue.source} — ${issue.file_name.replace(/\.pdf$/i, "")}`,
+      },
+      modifiedTime: issue.drive_modified_time ?? "",
+      orderIndex: row.order_index,
+    });
+    bySection.set(section, entries);
+  }
+
+  return MAGAZINE_SECTIONS.map((section) => {
+    const entries = bySection.get(section) ?? [];
+    entries.sort((a, b) => b.modifiedTime.localeCompare(a.modifiedTime) || a.orderIndex - b.orderIndex);
+    return { section, articles: entries.map((e) => e.article) };
+  }).filter((group) => group.articles.length > 0);
 }
 
 export async function fetchEntriesBySession(

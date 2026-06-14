@@ -74,6 +74,35 @@ export interface DriveFileTag {
   tagged_at: string;
 }
 
+// Fixed taxonomy for magazine article categories — used to prompt Gemini for
+// table-of-contents extraction, to normalize its output, and to order the
+// category segments on the /magazines page.
+export const MAGAZINE_SECTIONS = [
+  "Strategy & Competition",
+  "Management & Leadership",
+  "Industries & Sectors",
+  "Economics, Markets & Policy",
+  "Technology & Innovation",
+  "Careers & Management Lessons",
+  "Other",
+] as const;
+
+export type MagazineSection = (typeof MAGAZINE_SECTIONS)[number];
+
+export interface MagazineArticle {
+  id: string;
+  title: string;
+  section: MagazineSection;
+  isRead: boolean;
+  webViewLink: string;
+  issueLabel: string;
+}
+
+export interface MagazineCategoryGroup {
+  section: MagazineSection;
+  articles: MagazineArticle[];
+}
+
 export const UNSORTED_LABEL = "Unsorted";
 
 export interface EntryFormState {
