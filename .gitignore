@@ -42,3 +42,6 @@ next-env.d.ts
 
 dev-server.log
 .vercel
+
+# superpowers brainstorm scratch files
+/.superpowers/
