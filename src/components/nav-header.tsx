@@ -35,6 +35,9 @@ export function NavHeader({ userEmail }: { userEmail: string | null }) {
             <Link href="/magazines" className="text-neutral-600 hover:text-neutral-900">
               Magazines
             </Link>
+            <Link href="/industries" className="text-neutral-600 hover:text-neutral-900">
+              Industries
+            </Link>
             <Link href="/entries/new" className="text-neutral-600 hover:text-neutral-900">
               Add Entry
             </Link>

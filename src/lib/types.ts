@@ -63,6 +63,32 @@ export interface SubjectProfileFormState {
   error: string | null;
 }
 
+// AI-generated industry/sub-sector primer — the 10 narrative sections, each
+// stored and rendered as sanitized HTML.
+export interface IndustryPrimerContent {
+  overview: string;
+  market_size_growth: string;
+  future_outlook: string;
+  value_chain: string;
+  policy_regulatory: string;
+  technology_trends: string;
+  ai_digital_integration: string;
+  major_players: string;
+  key_metrics: string;
+  consulting_lens: string;
+}
+
+export interface IndustryPrimer extends IndustryPrimerContent {
+  id: string;
+  industry_slug: string;
+  subsector_slug: string;
+  industry_name: string;
+  subsector_name: string;
+  generated_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface DriveFileTag {
   file_id: string;
   subject: string;

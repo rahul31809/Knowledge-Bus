@@ -3,6 +3,8 @@ import {
   MAGAZINE_SECTIONS,
   UNSORTED_LABEL,
   type DriveFileTag,
+  type IndustryPrimer,
+  type IndustryPrimerContent,
   type KnowledgeEntry,
   type MagazineArticle,
   type MagazineCategoryGroup,
@@ -231,6 +233,55 @@ export async function fetchMagazineArticlesByCategory(supabase: SupabaseServerCl
     entries.sort((a, b) => b.modifiedTime.localeCompare(a.modifiedTime) || a.orderIndex - b.orderIndex);
     return { section, articles: entries.map((e) => e.article) };
   }).filter((group) => group.articles.length > 0);
+}
+
+export async function fetchIndustryPrimer(
+  supabase: SupabaseServerClient,
+  industrySlug: string,
+  subsectorSlug: string
+): Promise<IndustryPrimer | null> {
+  const { data, error } = await supabase
+    .from("industry_primers")
+    .select("*")
+    .eq("industry_slug", industrySlug)
+    .eq("subsector_slug", subsectorSlug)
+    .maybeSingle();
+
+  if (error) {
+    // Postgres "undefined_table" — migration 0010 hasn't run yet. Treat as
+    // "no primer yet" so the page falls back to generating one.
+    if (error.code === "42P01") return null;
+    throw error;
+  }
+  return data as IndustryPrimer | null;
+}
+
+export async function saveIndustryPrimer(
+  supabase: SupabaseServerClient,
+  industrySlug: string,
+  subsectorSlug: string,
+  industryName: string,
+  subsectorName: string,
+  content: IndustryPrimerContent
+): Promise<IndustryPrimer> {
+  const { data, error } = await supabase
+    .from("industry_primers")
+    .upsert(
+      {
+        industry_slug: industrySlug,
+        subsector_slug: subsectorSlug,
+        industry_name: industryName,
+        subsector_name: subsectorName,
+        ...content,
+        generated_at: new Date().toISOString(),
+      },
+      { onConflict: "industry_slug,subsector_slug" }
+    )
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return data as IndustryPrimer;
 }
 
 export async function fetchEntriesBySession(
