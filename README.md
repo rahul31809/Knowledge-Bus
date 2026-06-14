@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Knowledge Bus
 
-## Getting Started
+A personal knowledge management platform for MBA coursework, industry research,
+and placement prep — built to turn scattered Drive folders, magazine PDFs, and
+newsletters into one searchable, AI-organized hub.
 
-First, run the development server:
+![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-Postgres-3FCF8E?logo=supabase&logoColor=white)
+![Tailwind](https://img.shields.io/badge/Tailwind-4-06B6D4?logo=tailwindcss&logoColor=white)
+![Vercel](https://img.shields.io/badge/Deploy-Vercel-black?logo=vercel)
+
+## What it does
+
+Knowledge Bus syncs directly with Google Drive and uses Gemini to read,
+categorize, and summarize content — so coursework, industry reading, and
+revision material all live in one dashboard instead of scattered folders
+and inboxes.
+
+## Features
+
+- **Subjects** — Auto-discovers course folders from a Drive root, renders
+  each subject's files as a collapsible folder tree (Pre-Reads, PPTs, Notes),
+  and organizes sessions with summaries and key learnings.
+- **Magazine Library** — Scans HBR / Economist / Business Today PDFs from
+  Drive, extracts tables of contents with Gemini, and groups articles into a
+  fixed taxonomy (Strategy & Competition, Leadership, Industries, Economics &
+  Policy, Technology, etc.) with read/unread tracking. Runs on a daily cron.
+- **Industry & Extra Learnings** — AI-generated industry and sub-sector
+  primers covering overview, market sizing, value chain, regulation, tech
+  trends, major players, and a consulting-lens summary, cached in Supabase
+  so each primer is generated once and reused.
+- **Entries & Notes** — Capture, tag, and link knowledge entries to subjects
+  and sessions for structured, retrievable revision material.
+- **Search** — Unified search across synced Drive files and entries.
+- **News** *(in progress)* — Daily aggregation from newsletters (The Ken,
+  Mint, Financial Times) with AI summaries.
+
+## Tech stack
+
+| Layer | Choice |
+| --- | --- |
+| Framework | Next.js 16 (App Router), React 19, TypeScript |
+| Styling | Tailwind CSS 4, shadcn/ui |
+| Database | Supabase (Postgres + Row Level Security) |
+| AI | Google Gemini (`@google/genai`) for TOC extraction, primers, summaries |
+| Integrations | Google Drive API for content sync |
+| Deployment | Vercel, with scheduled cron jobs for Drive and magazine sync |
+
+## Getting started
 
 ```bash
+npm install
+cp .env.local.example .env.local   # add your Supabase project URL + anon key
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Database schema lives in `supabase/migrations/` — apply them in order via the
+Supabase SQL editor.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Roadmap
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The long-term vision (4-section dashboard: Subjects, Industry & Extra
+Learnings, Notes, Quiz & Revision) is tracked in [ROADMAP.md](ROADMAP.md),
+with detailed specs for the Industry hub in [FutureGoal2.0.md](FutureGoal2.0.md).
