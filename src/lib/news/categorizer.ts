@@ -38,7 +38,7 @@ Example: ["Markets & Investing", "Energy & Infrastructure"]`;
     });
 
     const text = result.text ?? "";
-    const match = text.match(/\[[\s\S]*\]/);
+    const match = text.match(/\[[\s\S]*?\]/);
     if (!match) return items.map(() => "Other");
 
     const parsed = JSON.parse(match[0]);
