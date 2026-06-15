@@ -4,24 +4,28 @@ import { buttonVariants } from "@/components/ui/button";
 import { DashboardCard } from "@/components/dashboard-card";
 import { fetchDriveSubjectNames } from "@/lib/drive-sync/client";
 import { INDUSTRY_TAXONOMY } from "@/lib/industry-taxonomy";
-import { fetchEntries, fetchMagazineArticlesByCategory, fetchSubjects, withDriveOnlySubjects } from "@/lib/queries";
+import { fetchEntries, fetchMagazineArticlesByCategory, fetchNewsArticlesByCategory, fetchSubjects, withDriveOnlySubjects } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
 export default async function BrowsePage() {
   const supabase = await createClient();
 
-  const [subjects, driveSubjectNames, categories, briefingEntries] = await Promise.all([
+  const [subjects, driveSubjectNames, categories, briefingEntries, newsCategories] = await Promise.all([
     fetchSubjects(supabase),
     fetchDriveSubjectNames().catch(() => null),
     fetchMagazineArticlesByCategory(supabase),
     fetchEntries(supabase, { excludeType: "study_notes" }),
+    fetchNewsArticlesByCategory(supabase),
   ]);
 
   const allSubjects = withDriveOnlySubjects(subjects, driveSubjectNames);
 
   const allArticles = categories.flatMap((group) => group.articles);
   const unreadArticles = allArticles.filter((a) => !a.isRead);
+
+  const allNewsArticles = newsCategories.flatMap((group) => group.articles);
+  const unreadNewsArticles = allNewsArticles.filter((a) => !a.isRead);
 
   return (
     <div className="flex flex-col gap-6">
@@ -70,8 +74,12 @@ export default async function BrowsePage() {
           icon={RssIcon}
           accent="emerald"
           title="Current News"
-          description="The Ken, Mint, Financial Times and more — refreshed daily"
-          meta="Coming soon"
+          description="Markets, business and energy news — refreshed daily"
+          meta={
+            allNewsArticles.length > 0
+              ? `${allNewsArticles.length} articles · ${unreadNewsArticles.length} unread`
+              : "No articles yet"
+          }
         />
 
         <DashboardCard
