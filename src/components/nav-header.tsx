@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { signOut } from "@/app/login/actions";
 
 export function NavHeader({ userEmail }: { userEmail: string | null }) {
@@ -19,29 +20,15 @@ export function NavHeader({ userEmail }: { userEmail: string | null }) {
   }
 
   return (
-    <header className="border-b bg-white">
+    <header className="border-b bg-card">
       <div className="mx-auto flex max-w-5xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-6">
-          <Link href="/" className="text-lg font-semibold text-neutral-900">
-            Knowledge Base
+          <Link href="/" className="flex flex-col leading-tight">
+            <span className="bg-gradient-to-r from-indigo-500 via-violet-500 to-blue-500 bg-clip-text text-2xl font-bold text-transparent">
+              Knowledge Base
+            </span>
+            <span className="text-sm text-muted-foreground">Created by Rahul Agarwal (MBA, SPJIMR)</span>
           </Link>
-          <nav className="flex items-center gap-4 text-sm">
-            <Link href="/" className="text-neutral-600 hover:text-neutral-900">
-              Browse
-            </Link>
-            <Link href="/search" className="text-neutral-600 hover:text-neutral-900">
-              Search
-            </Link>
-            <Link href="/magazines" className="text-neutral-600 hover:text-neutral-900">
-              Magazines
-            </Link>
-            <Link href="/industries" className="text-neutral-600 hover:text-neutral-900">
-              Industries
-            </Link>
-            <Link href="/entries/new" className="text-neutral-600 hover:text-neutral-900">
-              Add Entry
-            </Link>
-          </nav>
         </div>
 
         <div className="flex items-center gap-3">
@@ -57,6 +44,7 @@ export function NavHeader({ userEmail }: { userEmail: string | null }) {
               Search
             </Button>
           </form>
+          <ThemeToggle />
           <form action={signOut}>
             <Button type="submit" variant="ghost" size="sm" title={userEmail ?? undefined}>
               Sign out
