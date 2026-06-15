@@ -63,19 +63,137 @@ export interface SubjectProfileFormState {
   error: string | null;
 }
 
-// AI-generated industry/sub-sector primer — the 10 narrative sections, each
-// stored and rendered as sanitized HTML.
+// AI-generated industry/sub-sector primer — 10 structured sections rendered
+// with charts, infographics and card grids (no HTML, plain data only).
+export interface PrimerStat {
+  label: string;
+  value: string;
+}
+
+export interface PrimerOverview {
+  summary: string;
+  key_stats: PrimerStat[];
+}
+
+export interface PrimerTrendPoint {
+  label: string;
+  value: number;
+}
+
+export interface PrimerMarketSizeGrowth {
+  current_size_label: string;
+  cagr_label: string;
+  trend_unit: string;
+  historical_trend: PrimerTrendPoint[];
+  commentary: string;
+}
+
+export interface PrimerDriver {
+  title: string;
+  description: string;
+}
+
+export interface PrimerFutureOutlook {
+  projection_label: string;
+  projected_cagr_label: string;
+  trend_unit: string;
+  comparison: PrimerTrendPoint[];
+  drivers: PrimerDriver[];
+}
+
+export type ValueCapture = "high" | "medium" | "low";
+
+export interface PrimerValueChainStage {
+  name: string;
+  description: string;
+  value_capture: ValueCapture;
+}
+
+export interface PrimerValueChain {
+  stages: PrimerValueChainStage[];
+}
+
+export interface PrimerPolicyItem {
+  title: string;
+  authority: string;
+  year: string;
+  description: string;
+}
+
+export interface PrimerPolicyRegulatory {
+  items: PrimerPolicyItem[];
+}
+
+export type Maturity = "emerging" | "scaling" | "mainstream";
+
+export interface PrimerTechTrend {
+  title: string;
+  description: string;
+  maturity: Maturity;
+}
+
+export interface PrimerTechnologyTrends {
+  trends: PrimerTechTrend[];
+}
+
+export type ImpactLevel = "high" | "medium" | "low";
+
+export interface PrimerAiUseCase {
+  title: string;
+  description: string;
+  impact: ImpactLevel;
+}
+
+export interface PrimerAiDigitalIntegration {
+  use_cases: PrimerAiUseCase[];
+}
+
+export interface PrimerPlayer {
+  name: string;
+  origin: "Indian" | "Global";
+  positioning: string;
+}
+
+export interface PrimerMajorPlayers {
+  players: PrimerPlayer[];
+}
+
+export interface PrimerMetric {
+  name: string;
+  benchmark: string;
+  description: string;
+}
+
+export interface PrimerKeyMetrics {
+  metrics: PrimerMetric[];
+}
+
+export interface PrimerFramework {
+  name: string;
+  application: string;
+}
+
+export interface PrimerCaseTheme {
+  title: string;
+  description: string;
+}
+
+export interface PrimerConsultingLens {
+  frameworks: PrimerFramework[];
+  case_themes: PrimerCaseTheme[];
+}
+
 export interface IndustryPrimerContent {
-  overview: string;
-  market_size_growth: string;
-  future_outlook: string;
-  value_chain: string;
-  policy_regulatory: string;
-  technology_trends: string;
-  ai_digital_integration: string;
-  major_players: string;
-  key_metrics: string;
-  consulting_lens: string;
+  overview: PrimerOverview;
+  market_size_growth: PrimerMarketSizeGrowth;
+  future_outlook: PrimerFutureOutlook;
+  value_chain: PrimerValueChain;
+  policy_regulatory: PrimerPolicyRegulatory;
+  technology_trends: PrimerTechnologyTrends;
+  ai_digital_integration: PrimerAiDigitalIntegration;
+  major_players: PrimerMajorPlayers;
+  key_metrics: PrimerKeyMetrics;
+  consulting_lens: PrimerConsultingLens;
 }
 
 export interface IndustryPrimer extends IndustryPrimerContent {
@@ -87,6 +205,39 @@ export interface IndustryPrimer extends IndustryPrimerContent {
   generated_at: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface QaSource {
+  uri: string;
+  title: string;
+}
+
+export interface IndustryPrimerNote {
+  id: string;
+  industry_slug: string;
+  subsector_slug: string;
+  question: string;
+  answer: string;
+  sources: QaSource[];
+  created_at: string;
+}
+
+export interface PrimerComparisonResult {
+  synthesis: string;
+  parameters: string[];
+  rows: { player: string; values: string[] }[];
+}
+
+export interface FrameworkFactor {
+  name: string;
+  rating: "High" | "Medium" | "Low";
+  description: string;
+}
+
+export interface FrameworkInsight {
+  framework: string;
+  summary: string;
+  factors: FrameworkFactor[];
 }
 
 export interface DriveFileTag {
@@ -127,6 +278,32 @@ export interface MagazineArticle {
 export interface MagazineCategoryGroup {
   section: MagazineSection;
   articles: MagazineArticle[];
+}
+
+export const NEWS_SECTIONS = [
+  "Markets & Investing",
+  "Business & Corporate Strategy",
+  "Economy & Policy",
+  "Energy & Infrastructure",
+  "Valuation & Corporate Finance",
+  "Other",
+] as const;
+
+export type NewsSection = (typeof NEWS_SECTIONS)[number];
+
+export interface NewsArticle {
+  id: string;
+  title: string;
+  link: string;
+  source: string;
+  summary: string;
+  publishedAt: string | null;
+  isRead: boolean;
+}
+
+export interface NewsCategoryGroup {
+  section: NewsSection;
+  articles: NewsArticle[];
 }
 
 export const UNSORTED_LABEL = "Unsorted";
