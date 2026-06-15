@@ -13,3 +13,14 @@ export async function setNewsArticleReadStatus(articleId: string, isRead: boolea
 
   revalidatePath("/news");
 }
+
+export async function setNewsArticleSavedStatus(articleId: string, isSaved: boolean): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("news_articles").update({ is_saved: isSaved }).eq("id", articleId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/news");
+}
