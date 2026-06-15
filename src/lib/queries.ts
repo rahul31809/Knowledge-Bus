@@ -360,12 +360,13 @@ interface NewsArticleRow {
   published_at: string | null;
   category: string;
   is_read: boolean;
+  is_saved: boolean;
 }
 
 export async function fetchNewsArticlesByCategory(supabase: SupabaseServerClient): Promise<NewsCategoryGroup[]> {
   const { data, error } = await supabase
     .from("news_articles")
-    .select("id, title, link, source, summary, published_at, category, is_read")
+    .select("id, title, link, source, summary, published_at, category, is_read, is_saved")
     .order("published_at", { ascending: false });
 
   if (error) {
@@ -388,6 +389,7 @@ export async function fetchNewsArticlesByCategory(supabase: SupabaseServerClient
       summary: row.summary ?? "",
       publishedAt: row.published_at,
       isRead: row.is_read,
+      isSaved: row.is_saved,
     });
     bySection.set(section, articles);
   }

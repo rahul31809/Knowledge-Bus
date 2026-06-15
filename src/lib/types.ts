@@ -299,6 +299,7 @@ export interface NewsArticle {
   summary: string;
   publishedAt: string | null;
   isRead: boolean;
+  isSaved: boolean;
 }
 
 export interface NewsCategoryGroup {
