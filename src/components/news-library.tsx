@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { ChevronRightIcon, ExternalLinkIcon, Loader2Icon, RefreshCwIcon, SparklesIcon } from "lucide-react";
-import { setNewsArticleReadStatus } from "@/app/(app)/news/actions";
+import { BookmarkIcon, ChevronRightIcon, ExternalLinkIcon, Loader2Icon, RefreshCwIcon, SparklesIcon } from "lucide-react";
+import { setNewsArticleReadStatus, setNewsArticleSavedStatus } from "@/app/(app)/news/actions";
 import { Markdown } from "@/components/industry-primer/markdown";
 import { cn } from "@/lib/utils";
 import type { NewsArticle, NewsCategoryGroup } from "@/lib/types";
@@ -27,15 +27,29 @@ function formatRelativeTime(iso: string | null): string {
 
 function ArticleRow({ article }: { article: NewsArticle }) {
   const [isRead, setIsRead] = useState(article.isRead);
-  const [pending, startTransition] = useTransition();
+  const [isSaved, setIsSaved] = useState(article.isSaved);
+  const [readPending, startReadTransition] = useTransition();
+  const [savePending, startSaveTransition] = useTransition();
 
-  function handleToggle(checked: boolean) {
+  function handleReadToggle(checked: boolean) {
     setIsRead(checked);
-    startTransition(async () => {
+    startReadTransition(async () => {
       try {
         await setNewsArticleReadStatus(article.id, checked);
       } catch {
         setIsRead(!checked);
+      }
+    });
+  }
+
+  function handleSaveToggle() {
+    const next = !isSaved;
+    setIsSaved(next);
+    startSaveTransition(async () => {
+      try {
+        await setNewsArticleSavedStatus(article.id, next);
+      } catch {
+        setIsSaved(!next);
       }
     });
   }
@@ -45,11 +59,20 @@ function ArticleRow({ article }: { article: NewsArticle }) {
       <input
         type="checkbox"
         checked={isRead}
-        disabled={pending}
-        onChange={(e) => handleToggle(e.target.checked)}
+        disabled={readPending}
+        onChange={(e) => handleReadToggle(e.target.checked)}
         className="size-4 shrink-0 accent-primary"
         aria-label={`Mark "${article.title}" as read`}
       />
+      <button
+        type="button"
+        onClick={handleSaveToggle}
+        disabled={savePending}
+        className="shrink-0 text-muted-foreground hover:text-foreground disabled:opacity-50"
+        aria-label={isSaved ? `Unsave "${article.title}"` : `Save "${article.title}"`}
+      >
+        <BookmarkIcon className={cn("size-4", isSaved ? "fill-current text-amber-500" : "fill-none")} />
+      </button>
       <a href={article.link} target="_blank" rel="noopener noreferrer" className="group flex flex-1 items-center gap-2 truncate">
         <div className="flex flex-col truncate">
           <span className={cn("truncate text-sm group-hover:underline", isRead ? "text-muted-foreground" : "text-foreground")}>
