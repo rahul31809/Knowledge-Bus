@@ -33,8 +33,8 @@ export default async function SessionPage({
       />
 
       <div>
-        <h1 className="text-2xl font-semibold text-neutral-900">{session}</h1>
-        <p className="text-sm text-neutral-500">{plural(entries.length, "note")}</p>
+        <h1 className="text-2xl font-semibold text-foreground">{session}</h1>
+        <p className="text-sm text-muted-foreground">{plural(entries.length, "note")}</p>
       </div>
 
       <div className="flex flex-col gap-3">

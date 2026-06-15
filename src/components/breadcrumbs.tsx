@@ -8,16 +8,16 @@ export interface BreadcrumbItem {
 
 export function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
   return (
-    <nav className="flex flex-wrap items-center gap-1.5 text-sm text-neutral-500">
+    <nav className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
       {items.map((item, i) => (
         <span key={i} className="flex items-center gap-1.5">
-          {i > 0 ? <ChevronRightIcon className="size-3.5 text-neutral-300" /> : null}
+          {i > 0 ? <ChevronRightIcon className="size-3.5 text-muted-foreground/50" /> : null}
           {item.href ? (
-            <Link href={item.href} className="hover:text-neutral-900 hover:underline">
+            <Link href={item.href} className="hover:text-foreground hover:underline">
               {item.label}
             </Link>
           ) : (
-            <span className="font-medium text-neutral-900">{item.label}</span>
+            <span className="font-medium text-foreground">{item.label}</span>
           )}
         </span>
       ))}

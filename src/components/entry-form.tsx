@@ -122,7 +122,7 @@ export function EntryForm({ action, defaults, submitLabel, pendingLabel }: Entry
               placeholder="e.g. Session 4 — Segmentation"
             />
           </div>
-          <p className="text-xs text-neutral-500 sm:col-span-2">
+          <p className="text-xs text-muted-foreground sm:col-span-2">
             Leave blank to file under &quot;{`Unsorted`}&quot; — you can fill these in later from the edit page.
           </p>
         </div>
@@ -151,7 +151,7 @@ export function EntryForm({ action, defaults, submitLabel, pendingLabel }: Entry
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="body_html">Content</Label>
-        <p className="text-xs text-neutral-500">
+        <p className="text-xs text-muted-foreground">
           Paste directly from your Gmail draft (formatting is preserved and sanitized) or plain text.
         </p>
         <Textarea
@@ -166,7 +166,7 @@ export function EntryForm({ action, defaults, submitLabel, pendingLabel }: Entry
       </div>
 
       {state?.error ? (
-        <p className="text-sm text-red-600" role="alert">
+        <p className="text-sm text-destructive" role="alert">
           {state.error}
         </p>
       ) : null}

@@ -1,14 +1,19 @@
 import type { createClient } from "@/lib/supabase/server";
 import {
   MAGAZINE_SECTIONS,
+  NEWS_SECTIONS,
   UNSORTED_LABEL,
   type DriveFileTag,
   type IndustryPrimer,
   type IndustryPrimerContent,
+  type IndustryPrimerNote,
   type KnowledgeEntry,
   type MagazineArticle,
   type MagazineCategoryGroup,
   type MagazineSection,
+  type NewsArticle,
+  type NewsCategoryGroup,
+  type NewsSection,
   type SubjectProfile,
 } from "./types";
 
@@ -100,6 +105,28 @@ export async function fetchSubjects(supabase: SupabaseServerClient): Promise<Sub
       latestDate: acc.latestDate,
     }))
     .sort((a, b) => b.latestDate.localeCompare(a.latestDate));
+}
+
+// Subjects come from synced notes, but a course folder in Drive should show
+// up the moment it exists — even before any notes have been synced from it.
+// Drive-only entries get zeroed counts and a null date, sorted alphabetically
+// after the subjects that already have notes.
+export function withDriveOnlySubjects(subjects: SubjectSummary[], driveNames: string[] | null): SubjectSummary[] {
+  if (!driveNames || driveNames.length === 0) return subjects;
+
+  const known = new Set(subjects.map((s) => s.subject));
+  const driveOnly: SubjectSummary[] = driveNames
+    .filter((name) => !known.has(name))
+    .map((name) => ({ subject: name, sessionCount: 0, entryCount: 0, latestDate: null }));
+
+  if (driveOnly.length === 0) return subjects;
+
+  return [...subjects, ...driveOnly].sort((a, b) => {
+    if (a.latestDate && b.latestDate) return b.latestDate.localeCompare(a.latestDate);
+    if (a.latestDate) return -1;
+    if (b.latestDate) return 1;
+    return a.subject.localeCompare(b.subject);
+  });
 }
 
 export async function fetchSessions(supabase: SupabaseServerClient, subject: string): Promise<SessionSummary[]> {
@@ -284,6 +311,27 @@ export async function saveIndustryPrimer(
   return data as IndustryPrimer;
 }
 
+export async function fetchIndustryPrimerNotes(
+  supabase: SupabaseServerClient,
+  industrySlug: string,
+  subsectorSlug: string
+): Promise<IndustryPrimerNote[]> {
+  const { data, error } = await supabase
+    .from("industry_primer_notes")
+    .select("*")
+    .eq("industry_slug", industrySlug)
+    .eq("subsector_slug", subsectorSlug)
+    .order("created_at", { ascending: false });
+
+  // Postgres "undefined_table" — migration 0012 hasn't run yet. Treat as "no
+  // saved notes" so the Q&A box still renders.
+  if (error) {
+    if (error.code === "42P01") return [];
+    throw error;
+  }
+  return (data ?? []) as IndustryPrimerNote[];
+}
+
 export async function fetchEntriesBySession(
   supabase: SupabaseServerClient,
   subject: string,
@@ -301,4 +349,53 @@ export async function fetchEntriesBySession(
   const { data, error } = await request;
   if (error) throw error;
   return (data ?? []) as KnowledgeEntry[];
+}
+
+interface NewsArticleRow {
+  id: string;
+  title: string;
+  link: string;
+  source: string;
+  summary: string | null;
+  published_at: string | null;
+  category: string;
+  is_read: boolean;
+  is_saved: boolean;
+}
+
+export async function fetchNewsArticlesByCategory(supabase: SupabaseServerClient): Promise<NewsCategoryGroup[]> {
+  const { data, error } = await supabase
+    .from("news_articles")
+    .select("id, title, link, source, summary, published_at, category, is_read, is_saved")
+    .order("published_at", { ascending: false });
+
+  if (error) {
+    return [];
+  }
+
+  const bySection = new Map<NewsSection, NewsArticle[]>();
+
+  for (const row of (data ?? []) as NewsArticleRow[]) {
+    const section: NewsSection = (NEWS_SECTIONS as readonly string[]).includes(row.category)
+      ? (row.category as NewsSection)
+      : "Other";
+
+    const articles = bySection.get(section) ?? [];
+    articles.push({
+      id: row.id,
+      title: row.title,
+      link: row.link,
+      source: row.source,
+      summary: row.summary ?? "",
+      publishedAt: row.published_at,
+      isRead: row.is_read,
+      isSaved: row.is_saved,
+    });
+    bySection.set(section, articles);
+  }
+
+  return NEWS_SECTIONS.map((section) => ({
+    section,
+    articles: bySection.get(section) ?? [],
+  })).filter((group) => group.articles.length > 0);
 }
