@@ -5,6 +5,7 @@ import {
   type DriveFileTag,
   type IndustryPrimer,
   type IndustryPrimerContent,
+  type IndustryPrimerNote,
   type KnowledgeEntry,
   type MagazineArticle,
   type MagazineCategoryGroup,
@@ -100,6 +101,28 @@ export async function fetchSubjects(supabase: SupabaseServerClient): Promise<Sub
       latestDate: acc.latestDate,
     }))
     .sort((a, b) => b.latestDate.localeCompare(a.latestDate));
+}
+
+// Subjects come from synced notes, but a course folder in Drive should show
+// up the moment it exists — even before any notes have been synced from it.
+// Drive-only entries get zeroed counts and a null date, sorted alphabetically
+// after the subjects that already have notes.
+export function withDriveOnlySubjects(subjects: SubjectSummary[], driveNames: string[] | null): SubjectSummary[] {
+  if (!driveNames || driveNames.length === 0) return subjects;
+
+  const known = new Set(subjects.map((s) => s.subject));
+  const driveOnly: SubjectSummary[] = driveNames
+    .filter((name) => !known.has(name))
+    .map((name) => ({ subject: name, sessionCount: 0, entryCount: 0, latestDate: null }));
+
+  if (driveOnly.length === 0) return subjects;
+
+  return [...subjects, ...driveOnly].sort((a, b) => {
+    if (a.latestDate && b.latestDate) return b.latestDate.localeCompare(a.latestDate);
+    if (a.latestDate) return -1;
+    if (b.latestDate) return 1;
+    return a.subject.localeCompare(b.subject);
+  });
 }
 
 export async function fetchSessions(supabase: SupabaseServerClient, subject: string): Promise<SessionSummary[]> {
@@ -282,6 +305,27 @@ export async function saveIndustryPrimer(
 
   if (error) throw error;
   return data as IndustryPrimer;
+}
+
+export async function fetchIndustryPrimerNotes(
+  supabase: SupabaseServerClient,
+  industrySlug: string,
+  subsectorSlug: string
+): Promise<IndustryPrimerNote[]> {
+  const { data, error } = await supabase
+    .from("industry_primer_notes")
+    .select("*")
+    .eq("industry_slug", industrySlug)
+    .eq("subsector_slug", subsectorSlug)
+    .order("created_at", { ascending: false });
+
+  // Postgres "undefined_table" — migration 0012 hasn't run yet. Treat as "no
+  // saved notes" so the Q&A box still renders.
+  if (error) {
+    if (error.code === "42P01") return [];
+    throw error;
+  }
+  return (data ?? []) as IndustryPrimerNote[];
 }
 
 export async function fetchEntriesBySession(
