@@ -1,18 +1,27 @@
-export default function NewsPage() {
+import { NewsLibrary } from "@/components/news-library";
+import { fetchNewsArticlesByCategory } from "@/lib/queries";
+import { createClient } from "@/lib/supabase/server";
+
+export default async function NewsPage() {
+  const supabase = await createClient();
+  const categories = await fetchNewsArticlesByCategory(supabase);
+
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold text-neutral-900">Current News</h1>
-        <p className="text-sm text-neutral-500">
-          Daily articles from your newsletters and feeds — coming soon.
+        <h1 className="text-2xl font-semibold text-foreground">Current News</h1>
+        <p className="text-sm text-muted-foreground">
+          Daily articles from your market, business and energy newsletters, grouped by topic.
         </p>
       </div>
 
-      <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-10 text-center text-sm text-neutral-500">
-        This section isn&apos;t wired up yet. Once the News feature ships, fresh articles from The
-        Ken, Mint, Financial Times and other sources will show up here automatically, with an AI
-        summary tab for everything.
-      </div>
+      <NewsLibrary categories={categories} />
+
+      {categories.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground">
+          No articles yet. Click &quot;Refresh news&quot; above to run the first scan.
+        </div>
+      ) : null}
     </div>
   );
 }

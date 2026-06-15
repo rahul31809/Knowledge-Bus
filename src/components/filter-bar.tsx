@@ -15,15 +15,15 @@ function buildHref(params: { q?: string; type?: string; tag?: string }) {
   if (params.type) sp.set("type", params.type);
   if (params.tag) sp.set("tag", params.tag);
   const qs = sp.toString();
-  return qs ? `/?${qs}` : "/";
+  return qs ? `/readings?${qs}` : "/readings";
 }
 
 function pillClasses(active: boolean) {
   return cn(
     "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
     active
-      ? "border-neutral-900 bg-neutral-900 text-white"
-      : "border-neutral-200 bg-white text-neutral-600 hover:border-neutral-300"
+      ? "border-primary bg-primary text-primary-foreground"
+      : "border-border bg-card text-muted-foreground hover:border-primary/40"
   );
 }
 
@@ -46,11 +46,11 @@ export function FilterBar({ activeType, activeTag, query, types = ENTRY_TYPES }:
       ))}
 
       {activeTag ? (
-        <span className="ml-1 inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
+        <span className="ml-1 inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
           Tag: {activeTag}
           <Link
             href={buildHref({ q: query, type: activeType })}
-            className="text-blue-400 hover:text-blue-700"
+            className="text-primary/60 hover:text-primary"
             aria-label="Clear tag filter"
           >
             ×
@@ -59,7 +59,7 @@ export function FilterBar({ activeType, activeTag, query, types = ENTRY_TYPES }:
       ) : null}
 
       {hasFilters ? (
-        <Link href={buildHref({ q: query })} className="text-xs text-neutral-400 underline-offset-2 hover:text-neutral-700 hover:underline">
+        <Link href={buildHref({ q: query })} className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline">
           Clear filters
         </Link>
       ) : null}

@@ -140,6 +140,15 @@ const CATEGORY_FOLDER_NAMES = new Set([
   "PGPM Leadership, Innovation & Change",
 ]);
 
+// Display order for the "MBA Study Materials" term cards — program
+// progression order, not the order folders happen to appear in Drive.
+const CATEGORY_ORDER = [
+  "PGPM Pre Foundation",
+  "PGPM Core Foundation",
+  "PGPM Foundation",
+  "PGPM Leadership, Innovation & Change",
+];
+
 export async function listSubjectFolders(drive: drive_v3.Drive, rootFolderId: string): Promise<DriveFolder[]> {
   const rootChildren = await listFolderChildren(drive, rootFolderId);
   const rootSubfolders = rootChildren.filter((c) => c.mimeType === FOLDER_MIME);
@@ -155,6 +164,47 @@ export async function listSubjectFolders(drive: drive_v3.Drive, rootFolderId: st
     }
   }
   return result;
+}
+
+export interface DriveCategoryGroup {
+  category: string;
+  subjects: DriveFolder[];
+}
+
+// Groups course folders by their term/category folder — the inverse of
+// listSubjectFolders' flattening. Used for the "MBA Study Materials" section,
+// which browses subjects term-by-term. Non-category root folders (e.g. "News
+// Paper and Magazines") aren't part of MBA Study Materials and are skipped.
+export async function listSubjectFoldersByCategory(drive: drive_v3.Drive, rootFolderId: string): Promise<DriveCategoryGroup[]> {
+  const rootChildren = await listFolderChildren(drive, rootFolderId);
+  const categoryFolders = rootChildren.filter((c) => c.mimeType === FOLDER_MIME && CATEGORY_FOLDER_NAMES.has(c.name));
+
+  const groups = new Map<string, DriveFolder[]>();
+  for (const folder of categoryFolders) {
+    const children = await listFolderChildren(drive, folder.id);
+    const courseFolders = children.filter((c) => c.mimeType === FOLDER_MIME);
+    groups.set(folder.name, courseFolders.map((f) => ({ id: f.id, name: f.name })));
+  }
+
+  return CATEGORY_ORDER.filter((name) => groups.has(name)).map((name) => ({
+    category: name,
+    subjects: groups.get(name)!,
+  }));
+}
+
+// Names of every subject folder in Drive, grouped by term — lets the "MBA
+// Study Materials" section drill from terms into their course folders.
+// Returns null when Drive isn't configured or unreachable.
+export async function fetchDriveSubjectsByCategory(): Promise<DriveCategoryGroup[] | null> {
+  const rootFolderId = process.env.DRIVE_SUBJECTS_ROOT_FOLDER_ID;
+  if (!rootFolderId || !process.env.GOOGLE_SERVICE_ACCOUNT_JSON) return null;
+
+  try {
+    const drive = getDriveClient();
+    return await listSubjectFoldersByCategory(drive, rootFolderId);
+  } catch {
+    return null;
+  }
 }
 
 export type SubjectDriveLookup =

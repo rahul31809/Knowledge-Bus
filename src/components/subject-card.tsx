@@ -11,16 +11,16 @@ export function SubjectCard({ subject }: { subject: SubjectSummary }) {
   return (
     <Link
       href={`/subjects/${encodeURIComponent(subject.subject)}`}
-      className="group flex flex-col gap-2 rounded-lg border border-neutral-200 bg-white p-4 transition-colors hover:border-neutral-300"
+      className="group flex flex-col gap-2 rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary/40"
     >
       <div className="flex items-start justify-between gap-2">
-        <h3 className="text-base font-semibold text-neutral-900 group-hover:underline">{subject.subject}</h3>
-        <ArrowRightIcon className="mt-0.5 size-4 shrink-0 text-neutral-300 transition-transform group-hover:translate-x-0.5 group-hover:text-neutral-500" />
+        <h3 className="text-base font-semibold text-foreground group-hover:underline">{subject.subject}</h3>
+        <ArrowRightIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground/50 transition-transform group-hover:translate-x-0.5 group-hover:text-muted-foreground" />
       </div>
-      <p className="text-sm text-neutral-500">
+      <p className="text-sm text-muted-foreground">
         {plural(subject.sessionCount, "session")} · {plural(subject.entryCount, "note")}
       </p>
-      <p className="text-xs text-neutral-400">
+      <p className="text-xs text-muted-foreground">
         {subject.latestDate ? `Last updated ${formatEntryDate(subject.latestDate)}` : "No synced notes yet"}
       </p>
     </Link>

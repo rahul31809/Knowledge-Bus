@@ -30,7 +30,7 @@ export function SubjectProfileForm({ subject, action, defaults }: SubjectProfile
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="overview">Overview</Label>
-        <p className="text-xs text-neutral-500">What this course is about and why it matters — a few lines.</p>
+        <p className="text-xs text-muted-foreground">What this course is about and why it matters — a few lines.</p>
         <Textarea
           id="overview"
           name="overview"
@@ -42,7 +42,7 @@ export function SubjectProfileForm({ subject, action, defaults }: SubjectProfile
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="course_outline">Course outline</Label>
-        <p className="text-xs text-neutral-500">Topics, structure, evaluation — paste from the syllabus or summarize.</p>
+        <p className="text-xs text-muted-foreground">Topics, structure, evaluation — paste from the syllabus or summarize.</p>
         <Textarea
           id="course_outline"
           name="course_outline"
@@ -55,7 +55,7 @@ export function SubjectProfileForm({ subject, action, defaults }: SubjectProfile
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="frameworks">Important frameworks</Label>
-        <p className="text-xs text-neutral-500">The recurring models worth knowing cold for exams and interviews.</p>
+        <p className="text-xs text-muted-foreground">The recurring models worth knowing cold for exams and interviews.</p>
         <Textarea
           id="frameworks"
           name="frameworks"
@@ -68,7 +68,7 @@ export function SubjectProfileForm({ subject, action, defaults }: SubjectProfile
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="revision_highlights">Revision highlights</Label>
-        <p className="text-xs text-neutral-500">The points you&apos;d want surfaced the night before an exam or interview.</p>
+        <p className="text-xs text-muted-foreground">The points you&apos;d want surfaced the night before an exam or interview.</p>
         <Textarea
           id="revision_highlights"
           name="revision_highlights"
@@ -80,7 +80,7 @@ export function SubjectProfileForm({ subject, action, defaults }: SubjectProfile
       </div>
 
       {state?.error ? (
-        <p className="text-sm text-red-600" role="alert">
+        <p className="text-sm text-destructive" role="alert">
           {state.error}
         </p>
       ) : null}

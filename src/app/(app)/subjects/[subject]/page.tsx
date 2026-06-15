@@ -54,8 +54,8 @@ export default async function SubjectPage({ params }: { params: Promise<{ subjec
 
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-neutral-900">{subject}</h1>
-          <p className="text-sm text-neutral-500">{plural(sessions.length, "session")}</p>
+          <h1 className="text-2xl font-semibold text-foreground">{subject}</h1>
+          <p className="text-sm text-muted-foreground">{plural(sessions.length, "session")}</p>
         </div>
         {canEditInfo ? (
           <Link
@@ -71,16 +71,16 @@ export default async function SubjectPage({ params }: { params: Promise<{ subjec
       {sections.length > 0 ? (
         <div className="flex flex-col gap-4">
           {sections.map((section) => (
-            <div key={section.key} className="rounded-lg border border-neutral-200 bg-white p-4">
-              <h2 className="text-sm font-semibold text-neutral-900">{section.title}</h2>
-              <p className="mt-2 whitespace-pre-wrap text-sm text-neutral-600">{section.value}</p>
+            <div key={section.key} className="rounded-lg border border-border bg-card p-4">
+              <h2 className="text-sm font-semibold text-foreground">{section.title}</h2>
+              <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{section.value}</p>
             </div>
           ))}
         </div>
       ) : canEditInfo ? (
         <Link
           href={`/subjects/${encodeURIComponent(subject)}/edit`}
-          className="rounded-lg border border-dashed border-neutral-300 bg-white p-4 text-sm text-neutral-500 transition-colors hover:border-neutral-400 hover:text-neutral-700"
+          className="rounded-lg border border-dashed border-border bg-card p-4 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
         >
           No course overview, outline, frameworks, or revision highlights yet — add subject info.
         </Link>
@@ -95,7 +95,7 @@ export default async function SubjectPage({ params }: { params: Promise<{ subjec
           ))}
         </div>
       ) : (
-        <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-8 text-center text-sm text-neutral-500">
+        <div className="rounded-lg border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">
           No synced session notes for this subject yet — they&apos;ll show up here once added.
         </div>
       )}
