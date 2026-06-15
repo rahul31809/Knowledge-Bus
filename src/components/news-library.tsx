@@ -25,6 +25,13 @@ function formatRelativeTime(iso: string | null): string {
   return `${diffDays}d ago`;
 }
 
+function compareByPublishedDesc(a: NewsArticle, b: NewsArticle): number {
+  if (!a.publishedAt && !b.publishedAt) return 0;
+  if (!a.publishedAt) return 1;
+  if (!b.publishedAt) return -1;
+  return b.publishedAt.localeCompare(a.publishedAt);
+}
+
 function ArticleRow({ article }: { article: NewsArticle }) {
   const [isRead, setIsRead] = useState(article.isRead);
   const [isSaved, setIsSaved] = useState(article.isSaved);
@@ -86,6 +93,27 @@ function ArticleRow({ article }: { article: NewsArticle }) {
         <ExternalLinkIcon className="ml-auto size-3.5 shrink-0 text-muted-foreground/50 group-hover:text-muted-foreground" />
       </a>
     </div>
+  );
+}
+
+function SavedSection({ articles }: { articles: NewsArticle[] }) {
+  return (
+    <details open className="group/category rounded-lg border border-border bg-card">
+      <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold text-foreground [&::-webkit-details-marker]:hidden">
+        <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground transition-transform group-open/category:rotate-90" />
+        Saved ({articles.length})
+      </summary>
+
+      <div className="flex flex-col gap-1 border-t border-border p-2">
+        {articles.length === 0 ? (
+          <p className="px-2 py-3 text-sm text-muted-foreground">
+            No saved articles yet — click the bookmark icon on any article to save it here.
+          </p>
+        ) : (
+          articles.map((article) => <ArticleRow key={article.id} article={article} />)
+        )}
+      </div>
+    </details>
   );
 }
 
@@ -186,9 +214,15 @@ function RefreshNewsButton() {
 }
 
 export function NewsLibrary({ categories }: { categories: NewsCategoryGroup[] }) {
+  const savedArticles = categories
+    .flatMap((group) => group.articles)
+    .filter((article) => article.isSaved)
+    .sort(compareByPublishedDesc);
+
   return (
     <div className="flex flex-col gap-3">
       <RefreshNewsButton />
+      <SavedSection articles={savedArticles} />
       {categories.map((group) => (
         <CategorySection key={group.section} group={group} />
       ))}
