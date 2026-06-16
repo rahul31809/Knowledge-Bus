@@ -3,13 +3,14 @@
 import { useState } from "react";
 import type { FinancialCompanyData, FinancialCompanyError, FinancialCompanyResult } from "@/app/api/industries/financials/route";
 
-type Tab = "pl" | "bs" | "cf" | "val";
+type Tab = "pl" | "bs" | "cf" | "val" | "sector";
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: "pl",  label: "P&L" },
-  { id: "bs",  label: "Balance Sheet" },
-  { id: "cf",  label: "Cash Flow" },
-  { id: "val", label: "Valuation" },
+const BASE_TABS: { id: Tab; label: string }[] = [
+  { id: "pl",     label: "P&L" },
+  { id: "bs",     label: "Balance Sheet" },
+  { id: "cf",     label: "Cash Flow" },
+  { id: "val",    label: "Valuation" },
+  { id: "sector", label: "Sector KPIs" },
 ];
 
 // ─── Formatters ──────────────────────────────────────────────────────────────
@@ -89,6 +90,9 @@ export function FinancialComparison({ companies }: { companies: FinancialCompany
   const ok   = companies.filter((c): c is FinancialCompanyData => !isError(c));
   const fail = companies.filter(isError);
 
+  const hasSectorMetrics = ok.some((c) => c.sectorMetrics && c.sectorMetrics.length > 0);
+  const TABS = hasSectorMetrics ? BASE_TABS : BASE_TABS.filter((t) => t.id !== "sector");
+
   if (ok.length === 0) {
     return (
       <div className="rounded-lg border border-border bg-card p-4">
@@ -98,7 +102,8 @@ export function FinancialComparison({ companies }: { companies: FinancialCompany
     );
   }
 
-  const isVal = activeTab === "val";
+  const isVal    = activeTab === "val";
+  const isSector = activeTab === "sector";
 
   // For valuation tab: one value per company
   const val1 = (fn: (c: FinancialCompanyData) => string) => ok.map(fn);
@@ -133,7 +138,7 @@ export function FinancialComparison({ companies }: { companies: FinancialCompany
               <th className="w-48 bg-slate-800 px-4 py-3 text-xs font-medium text-slate-400">Metric</th>
               {ok.map((c, idx) => {
                 const p = PALETTE[idx % PALETTE.length];
-                const span = isVal ? 1 : Math.min(c.years.length, 3);
+                const span = (isVal || isSector) ? 1 : Math.min(c.years.length, 3);
                 return (
                   <th key={c.name} colSpan={span}
                     className={`bg-slate-800 px-4 py-3 text-center ${p.topBorder} ${p.divider}`}
@@ -153,7 +158,7 @@ export function FinancialComparison({ companies }: { companies: FinancialCompany
               <th className="bg-muted/70 px-4 py-2" />
               {ok.map((c, idx) => {
                 const p = PALETTE[idx % PALETTE.length];
-                if (isVal) {
+                if (isVal || isSector) {
                   return (
                     <th key={c.name}
                       className={`bg-muted/70 px-3 py-2 text-right text-[11px] font-semibold text-muted-foreground ${idx > 0 ? p.divider : ""}`}
@@ -217,6 +222,27 @@ export function FinancialComparison({ companies }: { companies: FinancialCompany
               <Row label="Dividend Yield" values={val1((c) => fmtPct(c.ratios.dividendYield))} />
               <Row label="Beta"           values={val1((c) => fmtMult(c.ratios.beta, ""))} />
             </>)}
+
+            {/* Sector KPIs — one column per company, pre-formatted strings from API */}
+            {activeTab === "sector" && (() => {
+              const refMetrics = ok.find((c) => c.sectorMetrics && c.sectorMetrics.length > 0)?.sectorMetrics ?? [];
+              if (refMetrics.length === 0) {
+                return (
+                  <tr>
+                    <td colSpan={ok.length + 1} className="px-4 py-6 text-center text-xs text-muted-foreground">
+                      No sector-specific KPIs available for this subsector.
+                    </td>
+                  </tr>
+                );
+              }
+              return refMetrics.map((metric, i) => (
+                <Row
+                  key={metric.label}
+                  label={metric.label}
+                  values={ok.map((c) => c.sectorMetrics?.[i]?.value ?? "—")}
+                />
+              ));
+            })()}
           </tbody>
         </table>
       </div>

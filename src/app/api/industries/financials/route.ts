@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { NextResponse } from "next/server";
+import { getSectorMetricDefs } from "@/lib/industry-primers/sector-metrics";
 import { createClient } from "@/lib/supabase/server";
 
 export const maxDuration = 60;
@@ -23,6 +24,11 @@ export interface FinancialYear {
   totalEquity?: number | null;
   operatingCashFlow?: number | null;
   capex?: number | null;
+}
+
+export interface SectorMetric {
+  label: string;
+  value: string | null;
 }
 
 export interface FinancialRatios {
@@ -49,6 +55,7 @@ export interface FinancialCompanyData {
   dataNote?: string;
   years: FinancialYear[];
   ratios: FinancialRatios;
+  sectorMetrics?: SectorMetric[];
   error?: never;
 }
 
@@ -83,6 +90,17 @@ export async function POST(request: Request) {
     const ai = new GoogleGenAI({ apiKey });
 
     const playerList = players.map((p, i) => `${i + 1}. ${p}`).join("\n");
+
+    const sectorDefs = getSectorMetricDefs(industryName, subsectorName);
+    const sectorMetricsPromptBlock = sectorDefs
+      ? `
+Also include a "sectorMetrics" array for each company with these ${subsectorName}-specific KPIs (one current/latest value per company):
+${sectorDefs.map((m, i) => `${i + 1}. key: "${m.key}", label: "${m.label}", how to format: ${m.hint}`).join("\n")}
+
+Format each item as: { "label": "<exact label from above>", "value": "<formatted string with units>" }
+Use null for value if data is unavailable. Return them in the exact order listed above.`
+      : `
+Do NOT include a "sectorMetrics" field — no specific KPI mapping for this sector.`;
 
     const prompt = `You are a financial research analyst with deep knowledge of company annual reports, stock exchange filings, and investor presentations.
 
@@ -133,9 +151,11 @@ Return a JSON array. Each element must follow this exact schema:
       "marketCap": <in same crores/millions as other values, or null>,
       "dividendYield": <decimal or null>,
       "beta": <number or null>
-    }
+    },
+    "sectorMetrics": <array per instructions below, or omit if not applicable>
   }
 ]
+${sectorMetricsPromptBlock}
 
 Rules:
 - Include the 3 most recent completed fiscal years, most recent first (see date context above — FY2025 or FY2026 should be the latest for most companies)
