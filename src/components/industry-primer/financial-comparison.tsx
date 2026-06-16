@@ -4,50 +4,47 @@ import type { FinancialCompanyData, FinancialCompanyError, FinancialCompanyResul
 
 // ─── Formatters ─────────────────────────────────────────────────────────────
 
-function fmtAbsolute(val: number | undefined, currency: string): string {
+function fmtAbsolute(val: number | null | undefined, currency: string): string {
   if (val == null) return "—";
-  if (currency === "INR") {
-    const cr = val / 10_000_000;
-    if (Math.abs(cr) >= 100_000) return `₹${(cr / 100_000).toFixed(2)}L Cr`;
-    if (Math.abs(cr) >= 1_000) return `₹${(cr / 1_000).toFixed(1)}K Cr`;
-    return `₹${cr.toFixed(0)} Cr`;
+  if (currency === "INR_CR") {
+    if (Math.abs(val) >= 100_000) return `₹${(val / 100_000).toFixed(2)}L Cr`;
+    if (Math.abs(val) >= 1_000) return `₹${(val / 1_000).toFixed(1)}K Cr`;
+    return `₹${val.toFixed(0)} Cr`;
   }
-  const bn = Math.abs(val) / 1e9;
-  if (bn >= 1) return `$${bn.toFixed(2)}B`;
-  return `$${(val / 1e6).toFixed(0)}M`;
+  if (currency === "USD_M") {
+    if (Math.abs(val) >= 1_000) return `$${(val / 1_000).toFixed(2)}B`;
+    return `$${val.toFixed(0)}M`;
+  }
+  return val.toFixed(0);
 }
 
-function fmtPct(val: number | undefined): string {
+function fmtPct(val: number | null | undefined): string {
   if (val == null) return "—";
   return `${(val * 100).toFixed(1)}%`;
 }
 
-function fmtMultiple(val: number | undefined, suffix = "x"): string {
+function fmtMultiple(val: number | null | undefined, suffix = "x"): string {
   if (val == null) return "—";
   return `${val.toFixed(1)}${suffix}`;
 }
 
-function fmtEPS(val: number | undefined, currency: string): string {
+function fmtEPS(val: number | null | undefined, currency: string): string {
   if (val == null) return "—";
-  const symbol = currency === "INR" ? "₹" : "$";
+  const symbol = currency === "INR_CR" ? "₹" : "$";
   return `${symbol}${val.toFixed(2)}`;
 }
 
-function fmtMarketCap(val: number | undefined, currency: string): string {
-  return fmtAbsolute(val, currency);
-}
-
-function margin(num: number | undefined, denom: number | undefined): string {
+function margin(num: number | null | undefined, denom: number | null | undefined): string {
   if (num == null || denom == null || denom === 0) return "—";
   return `${((num / denom) * 100).toFixed(1)}%`;
 }
 
-function fcf(ocf: number | undefined, capex: number | undefined): number | undefined {
+function fcf(ocf: number | null | undefined, capex: number | null | undefined): number | undefined {
   if (ocf == null) return undefined;
   return ocf - Math.abs(capex ?? 0);
 }
 
-function yoyGrowth(curr: number | undefined, prev: number | undefined): string {
+function yoyGrowth(curr: number | null | undefined, prev: number | null | undefined): string {
   if (curr == null || prev == null || prev === 0) return "—";
   return `${(((curr - prev) / Math.abs(prev)) * 100).toFixed(1)}%`;
 }
@@ -151,8 +148,11 @@ export function FinancialComparison({ companies }: { companies: FinancialCompany
                   >
                     {company.name}
                     <span className="ml-1 text-[10px] font-normal text-muted-foreground">
-                      ({company.ticker} · {company.currency})
+                      ({company.ticker} · {company.currency === "INR_CR" ? "₹ Cr" : "$ M"})
                     </span>
+                    {company.dataNote ? (
+                      <span className="block text-[10px] font-normal text-muted-foreground/70">{company.dataNote}</span>
+                    ) : null}
                   </th>
                 );
               })}
@@ -305,7 +305,7 @@ export function FinancialComparison({ companies }: { companies: FinancialCompany
 
             <MetricRow
               label="Market Cap"
-              values={successful.flatMap((c) => Array(Math.min(c.years.length, 3)).fill(0).map((_, i) => i === 0 ? fmtMarketCap(c.ratios.marketCap, c.currency) : ""))}
+              values={successful.flatMap((c) => Array(Math.min(c.years.length, 3)).fill(0).map((_, i) => i === 0 ? fmtAbsolute(c.ratios.marketCap, c.currency) : ""))}
             />
             <MetricRow
               label="P/E (TTM)"
@@ -352,8 +352,8 @@ export function FinancialComparison({ companies }: { companies: FinancialCompany
       </div>
 
       <p className="text-[11px] text-muted-foreground">
-        Source: Yahoo Finance · Valuation ratios reflect latest available data · Figures in company reporting currency.
-        "—" indicates data not available on Yahoo Finance for this company.
+        AI-generated from publicly available annual reports and filings (Gemini) · Verify key figures against source documents before use in presentations.
+        "—" indicates data not reliably available · INR values in ₹ Crores · USD values in $ Millions.
       </p>
     </div>
   );

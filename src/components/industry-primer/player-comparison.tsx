@@ -157,6 +157,7 @@ export function PlayerComparison({
   }
 
   async function handleFinancials() {
+    setResult(null); // hide comparison panel
     setFinancialsLoading(true);
     setFinancialsError(null);
     try {
@@ -183,6 +184,7 @@ export function PlayerComparison({
   }
 
   async function handleCompare() {
+    setFinancials(null); // hide financials panel
     setLoading(true);
     setError(null);
     resetChat();

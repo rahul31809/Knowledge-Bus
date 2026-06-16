@@ -12,40 +12,41 @@ interface FinancialsRequestBody {
 
 export interface FinancialYear {
   year: string;
-  revenue?: number;
-  grossProfit?: number;
-  operatingIncome?: number;
-  ebitda?: number;
-  netIncome?: number;
-  eps?: number;
-  totalAssets?: number;
-  totalDebt?: number;
-  totalEquity?: number;
-  operatingCashFlow?: number;
-  capex?: number;
+  revenue?: number | null;
+  grossProfit?: number | null;
+  operatingIncome?: number | null;
+  ebitda?: number | null;
+  netIncome?: number | null;
+  eps?: number | null;
+  totalAssets?: number | null;
+  totalDebt?: number | null;
+  totalEquity?: number | null;
+  operatingCashFlow?: number | null;
+  capex?: number | null;
 }
 
 export interface FinancialRatios {
-  roe?: number;
-  roa?: number;
-  operatingMargin?: number;
-  profitMargin?: number;
-  revenueGrowth?: number;
-  debtToEquity?: number;
-  currentRatio?: number;
-  pe?: number;
-  forwardPE?: number;
-  pb?: number;
-  evEbitda?: number;
-  marketCap?: number;
-  dividendYield?: number;
-  beta?: number;
+  roe?: number | null;
+  roa?: number | null;
+  operatingMargin?: number | null;
+  profitMargin?: number | null;
+  revenueGrowth?: number | null;
+  debtToEquity?: number | null;
+  currentRatio?: number | null;
+  pe?: number | null;
+  forwardPE?: number | null;
+  pb?: number | null;
+  evEbitda?: number | null;
+  marketCap?: number | null;
+  dividendYield?: number | null;
+  beta?: number | null;
 }
 
 export interface FinancialCompanyData {
   name: string;
   ticker: string;
   currency: string;
+  dataNote?: string;
   years: FinancialYear[];
   ratios: FinancialRatios;
   error?: never;
@@ -59,116 +60,6 @@ export interface FinancialCompanyError {
 
 export type FinancialCompanyResult = FinancialCompanyData | FinancialCompanyError;
 
-async function resolveTicker(ai: GoogleGenAI, companyName: string, subsectorName: string): Promise<string | null> {
-  const result = await ai.models.generateContent({
-    model: "gemini-3.1-flash-lite",
-    contents: `What is the Yahoo Finance ticker symbol for the company named "${companyName}" in the "${subsectorName}" sector?
-For Indian companies listed on NSE append .NS; for BSE-only append .BO. For US/global companies use the primary exchange ticker (e.g. AAPL, GOOGL).
-Reply with ONLY the ticker symbol — no explanation, no punctuation. If genuinely unknown, reply UNKNOWN.`,
-  });
-  const raw = result.text?.trim().toUpperCase().replace(/[^A-Z0-9.\-]/g, "") ?? "";
-  return raw && raw !== "UNKNOWN" && raw.length <= 16 ? raw : null;
-}
-
-function safeRaw(value: unknown): number | undefined {
-  if (value == null) return undefined;
-  if (typeof value === "number") return value;
-  if (typeof value === "object" && value !== null && "raw" in value) {
-    const r = (value as { raw: unknown }).raw;
-    return typeof r === "number" ? r : undefined;
-  }
-  return undefined;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function parseYahooData(raw: any, name: string, ticker: string): FinancialCompanyData | null {
-  const r = raw?.quoteSummary?.result?.[0];
-  if (!r) return null;
-
-  const incomeList: unknown[] = r.incomeStatementHistory?.incomeStatementHistory ?? [];
-  const balanceList: unknown[] = r.balanceSheetHistory?.balanceSheetStatements ?? [];
-  const cashflowList: unknown[] = r.cashflowStatementHistory?.cashflowStatements ?? [];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const fd: any = r.financialData ?? {};
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const ks: any = r.defaultKeyStatistics ?? {};
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sd: any = r.summaryDetail ?? {};
-
-  const currency: string = fd.currency ?? sd.currency ?? "INR";
-
-  const years: FinancialYear[] = incomeList.slice(0, 3).map((inc, i) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const income = inc as any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const bal = (balanceList[i] ?? {}) as any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const cf = (cashflowList[i] ?? {}) as any;
-
-    const endFmt: string = income.endDate?.fmt ?? "";
-    const year = endFmt ? `FY${endFmt.slice(0, 4)}` : `FY${new Date().getFullYear() - i}`;
-
-    return {
-      year,
-      revenue: safeRaw(income.totalRevenue),
-      grossProfit: safeRaw(income.grossProfit),
-      operatingIncome: safeRaw(income.operatingIncome),
-      ebitda: safeRaw(income.ebitda),
-      netIncome: safeRaw(income.netIncome),
-      eps: safeRaw(income.dilutedEPS) ?? safeRaw(income.basicEPS),
-      totalAssets: safeRaw(bal.totalAssets),
-      totalDebt: safeRaw(bal.totalDebt),
-      totalEquity: safeRaw(bal.totalStockholderEquity),
-      operatingCashFlow: safeRaw(cf.totalCashFromOperatingActivities),
-      capex: safeRaw(cf.capitalExpenditures),
-    };
-  });
-
-  const ratios: FinancialRatios = {
-    roe: safeRaw(fd.returnOnEquity),
-    roa: safeRaw(fd.returnOnAssets),
-    operatingMargin: safeRaw(fd.operatingMargins),
-    profitMargin: safeRaw(fd.profitMargins),
-    revenueGrowth: safeRaw(fd.revenueGrowth),
-    debtToEquity: safeRaw(fd.debtToEquity),
-    currentRatio: safeRaw(fd.currentRatio),
-    pe: safeRaw(sd.trailingPE),
-    forwardPE: safeRaw(sd.forwardPE),
-    pb: safeRaw(ks.priceToBook),
-    evEbitda: safeRaw(ks.enterpriseToEbitda),
-    marketCap: safeRaw(sd.marketCap),
-    dividendYield: safeRaw(sd.dividendYield),
-    beta: safeRaw(ks.beta),
-  };
-
-  return { name, ticker, currency, years, ratios };
-}
-
-async function fetchYahooFinance(ticker: string) {
-  const modules = [
-    "incomeStatementHistory",
-    "balanceSheetHistory",
-    "cashflowStatementHistory",
-    "financialData",
-    "defaultKeyStatistics",
-    "summaryDetail",
-  ].join(",");
-
-  const url = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(ticker)}?modules=${modules}`;
-
-  const res = await fetch(url, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      Accept: "application/json",
-      "Accept-Language": "en-US,en;q=0.9",
-    },
-    signal: AbortSignal.timeout(15_000),
-  });
-
-  if (!res.ok) throw new Error(`Yahoo Finance returned ${res.status} for ${ticker}`);
-  return res.json();
-}
-
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
@@ -180,6 +71,7 @@ export async function POST(request: Request) {
     const body = (await request.json()) as FinancialsRequestBody;
     const players = Array.isArray(body.players) ? body.players.filter(Boolean) : [];
     const subsectorName = body.subsectorName?.trim() ?? "";
+    const industryName = body.industryName?.trim() ?? "";
 
     if (players.length < 1) {
       return NextResponse.json({ error: "Select at least 1 company" }, { status: 400 });
@@ -190,23 +82,79 @@ export async function POST(request: Request) {
 
     const ai = new GoogleGenAI({ apiKey });
 
-    const companies: FinancialCompanyResult[] = await Promise.all(
-      players.map(async (name): Promise<FinancialCompanyResult> => {
-        try {
-          const ticker = await resolveTicker(ai, name, subsectorName);
-          if (!ticker) return { name, error: "Could not resolve ticker — try adding the ticker manually" };
+    const playerList = players.map((p, i) => `${i + 1}. ${p}`).join("\n");
 
-          const raw = await fetchYahooFinance(ticker);
-          const data = parseYahooData(raw, name, ticker);
-          if (!data) return { name, ticker, error: "No financial data found on Yahoo Finance" };
+    const prompt = `You are a financial research analyst with deep knowledge of company annual reports, stock exchange filings, and investor presentations.
 
-          return data;
-        } catch (err) {
-          return { name, error: err instanceof Error ? err.message : "Fetch failed" };
-        }
-      })
-    );
+Provide financial data for the following companies operating in the "${subsectorName}" sub-sector of "${industryName}":
+${playerList}
 
+Return a JSON array. Each element must follow this exact schema:
+
+[
+  {
+    "name": "exact company name as provided above",
+    "ticker": "EXCHANGE:TICKER (e.g. NSE:INDIGOCA, BSE:500180, NYSE:GOOGL)",
+    "currency": "INR_CR for Indian companies (all monetary values in ₹ Crores), USD_M for US/global companies (values in $ Millions)",
+    "dataNote": "e.g. 'FY ends March 31' or 'consolidated financials' — keep to one short phrase",
+    "years": [
+      {
+        "year": "FY2024",
+        "revenue": <number or null>,
+        "grossProfit": <number or null>,
+        "operatingIncome": <number or null>,
+        "ebitda": <number or null>,
+        "netIncome": <number or null>,
+        "eps": <EPS in ₹ or $ per share, number or null>,
+        "totalAssets": <number or null>,
+        "totalDebt": <number or null>,
+        "totalEquity": <number or null>,
+        "operatingCashFlow": <number or null>,
+        "capex": <capex as positive number or null>
+      }
+    ],
+    "ratios": {
+      "roe": <decimal, e.g. 0.15 for 15%, or null>,
+      "roa": <decimal or null>,
+      "operatingMargin": <decimal or null>,
+      "profitMargin": <decimal or null>,
+      "revenueGrowth": <latest year YoY decimal or null>,
+      "debtToEquity": <ratio number or null>,
+      "currentRatio": <number or null>,
+      "pe": <trailing P/E or null>,
+      "forwardPE": <forward P/E or null>,
+      "pb": <price-to-book or null>,
+      "evEbitda": <EV/EBITDA or null>,
+      "marketCap": <in same crores/millions as other values, or null>,
+      "dividendYield": <decimal or null>,
+      "beta": <number or null>
+    }
+  }
+]
+
+Rules:
+- Include the 3 most recent completed fiscal years, most recent first
+- Use real data from annual reports or stock exchange filings — do not fabricate numbers
+- For Indian companies: all monetary values in ₹ Crores
+- For US/global companies: all monetary values in $ Millions
+- Ratios must be decimals (0.18 for 18%, NOT 18)
+- capex should be a positive number representing cash spent
+- Return null for any figure you cannot provide with reasonable confidence
+- If a company is not publicly listed or data is unavailable, set all year values and ratios to null and add a note in dataNote
+- Return ONLY the JSON array — no markdown fences, no commentary`;
+
+    const result = await ai.models.generateContent({
+      model: "gemini-3.1-flash-lite",
+      contents: prompt,
+    });
+
+    const text = result.text?.trim() ?? "";
+    const match = text.match(/\[[\s\S]*\]/);
+    if (!match) {
+      return NextResponse.json({ error: "Could not parse financial data from Gemini" }, { status: 502 });
+    }
+
+    const companies = JSON.parse(match[0]) as FinancialCompanyResult[];
     return NextResponse.json({ companies });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
