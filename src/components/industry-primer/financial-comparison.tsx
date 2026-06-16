@@ -208,21 +208,6 @@ export function FinancialComparison({ companies }: { companies: FinancialCompany
               <Row bold label="Free Cash Flow" hint="(OCF − Capex)" values={ok.flatMap((c) => c.years.slice(0, 3).map((y) => fmtAbs(fcf(y.operatingCashFlow, y.capex), c.currency)))} />
             </>)}
 
-            {/* Valuation — single column per company, all rows identical weight */}
-            {activeTab === "val" && (<>
-              <Row label="Market Cap"     values={val1((c) => fmtAbs(c.ratios.marketCap, c.currency))} />
-              <Row label="P/E (TTM)"      values={val1((c) => fmtMult(c.ratios.pe))} />
-              <Row label="Forward P/E"    values={val1((c) => fmtMult(c.ratios.forwardPE))} />
-              <Row label="P/B"            values={val1((c) => fmtMult(c.ratios.pb))} />
-              <Row label="EV / EBITDA"    values={val1((c) => fmtMult(c.ratios.evEbitda))} />
-              <Row label="ROE"            values={val1((c) => fmtPct(c.ratios.roe))} />
-              <Row label="ROA"            values={val1((c) => fmtPct(c.ratios.roa))} />
-              <Row label="Debt / Equity"  values={val1((c) => fmtMult(c.ratios.debtToEquity))} />
-              <Row label="Current Ratio"  values={val1((c) => fmtMult(c.ratios.currentRatio))} />
-              <Row label="Dividend Yield" values={val1((c) => fmtPct(c.ratios.dividendYield))} />
-              <Row label="Beta"           values={val1((c) => fmtMult(c.ratios.beta, ""))} />
-            </>)}
-
             {/* Sector KPIs — one column per company, pre-formatted strings from API */}
             {activeTab === "sector" && (() => {
               const refMetrics = ok.find((c) => c.sectorMetrics && c.sectorMetrics.length > 0)?.sectorMetrics ?? [];
@@ -243,6 +228,21 @@ export function FinancialComparison({ companies }: { companies: FinancialCompany
                 />
               ));
             })()}
+
+            {/* Valuation — single column per company, all rows identical weight */}
+            {activeTab === "val" && (<>
+              <Row label="Market Cap"     values={val1((c) => fmtAbs(c.ratios.marketCap, c.currency))} />
+              <Row label="P/E (TTM)"      values={val1((c) => fmtMult(c.ratios.pe))} />
+              <Row label="Forward P/E"    values={val1((c) => fmtMult(c.ratios.forwardPE))} />
+              <Row label="P/B"            values={val1((c) => fmtMult(c.ratios.pb))} />
+              <Row label="EV / EBITDA"    values={val1((c) => fmtMult(c.ratios.evEbitda))} />
+              <Row label="ROE"            values={val1((c) => fmtPct(c.ratios.roe))} />
+              <Row label="ROA"            values={val1((c) => fmtPct(c.ratios.roa))} />
+              <Row label="Debt / Equity"  values={val1((c) => fmtMult(c.ratios.debtToEquity))} />
+              <Row label="Current Ratio"  values={val1((c) => fmtMult(c.ratios.currentRatio))} />
+              <Row label="Dividend Yield" values={val1((c) => fmtPct(c.ratios.dividendYield))} />
+              <Row label="Beta"           values={val1((c) => fmtMult(c.ratios.beta, ""))} />
+            </>)}
           </tbody>
         </table>
       </div>

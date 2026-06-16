@@ -4,7 +4,7 @@ import { BarChart } from "@/components/industry-primer/bar-chart";
 import { FrameworkInsightGrid } from "@/components/industry-primer/framework-insight-grid";
 import { MetricTiles } from "@/components/industry-primer/metric-tiles";
 import { PlayerComparison } from "@/components/industry-primer/player-comparison";
-import { PrimerQaBox } from "@/components/industry-primer/primer-qa-box";
+import { SectorQaSection } from "@/components/industry-primer/sector-qa-section";
 import { SourceLink } from "@/components/industry-primer/source-link";
 import { StatRow } from "@/components/industry-primer/stat-row";
 import { TaggedCardGrid, impactVariant, maturityVariant } from "@/components/industry-primer/tagged-card-grid";
@@ -12,7 +12,7 @@ import { ValueChainDiagram } from "@/components/industry-primer/value-chain-diag
 import { ResetPrimerButton } from "@/components/industry-primer/reset-primer-button";
 import { generateIndustryPrimer } from "@/lib/industry-primers/generator";
 import { findSubsector } from "@/lib/industry-taxonomy";
-import { fetchIndustryPrimer, fetchIndustryPrimerNotes, saveIndustryPrimer } from "@/lib/queries";
+import { fetchIndustryPrimer, saveIndustryPrimer } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 
 export const maxDuration = 60;
@@ -48,7 +48,6 @@ export default async function IndustryPrimerPage({
     }
   }
 
-  const notes = primer ? await fetchIndustryPrimerNotes(supabase, industrySlug, subsectorSlug) : [];
   const searchContext = `${subsector.name} India`;
 
   return (
@@ -263,12 +262,9 @@ export default async function IndustryPrimerPage({
             <ResetPrimerButton industrySlug={industrySlug} subsectorSlug={subsectorSlug} />
           </div>
 
-          <PrimerQaBox
-            industrySlug={industrySlug}
-            subsectorSlug={subsectorSlug}
+          <SectorQaSection
             industryName={industry.name}
             subsectorName={subsector.name}
-            initialNotes={notes}
           />
         </div>
       ) : null}
