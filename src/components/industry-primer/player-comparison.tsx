@@ -65,6 +65,7 @@ export function PlayerComparison({
   }
 
   function toggle(name: string) {
+    const willBeEmpty = selected.has(name) && selected.size === 1;
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(name)) {
@@ -74,6 +75,7 @@ export function PlayerComparison({
       }
       return next;
     });
+    if (willBeEmpty) resetChat();
     setResult(null);
     setError(null);
   }
@@ -97,6 +99,7 @@ export function PlayerComparison({
   }
 
   function removeCustom(name: string) {
+    const willBeEmpty = selected.has(name) && selected.size === 1;
     setCustomNames((prev) => prev.filter((n) => n !== name));
     setSelected((prev) => {
       if (!prev.has(name)) return prev;
@@ -104,6 +107,7 @@ export function PlayerComparison({
       next.delete(name);
       return next;
     });
+    if (willBeEmpty) resetChat();
     setResult(null);
     setError(null);
   }
