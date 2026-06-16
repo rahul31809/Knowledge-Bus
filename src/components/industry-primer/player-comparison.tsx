@@ -65,18 +65,6 @@ export function PlayerComparison({
     return lines[Math.floor(Math.random() * lines.length)];
   });
 
-  // Sector Q&A state
-  const [sectorMessages, setSectorMessages] = useState<QaMessage[]>([]);
-  const [sectorInput, setSectorInput] = useState("");
-  const [sectorLoading, setSectorLoading] = useState(false);
-  const [sectorError, setSectorError] = useState<string | null>(null);
-  const sectorChatRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = sectorChatRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [sectorMessages, sectorLoading]);
-
   useEffect(() => {
     const el = chatContainerRef.current;
     if (el) el.scrollTop = el.scrollHeight;
@@ -181,37 +169,6 @@ export function PlayerComparison({
       setQaError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setQaLoading(false);
-    }
-  }
-
-  async function handleAskSector(event: FormEvent) {
-    event.preventDefault();
-    const q = sectorInput.trim();
-    if (!q || sectorLoading) return;
-
-    const userMsg: QaMessage = { role: "user", content: q };
-    const nextMessages = [...sectorMessages, userMsg];
-    setSectorMessages(nextMessages);
-    setSectorInput("");
-    setSectorLoading(true);
-    setSectorError(null);
-
-    try {
-      const res = await fetch("/api/industries/ask-sector", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ industryName, subsectorName, messages: nextMessages }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.error ?? "Failed to get an answer");
-      }
-      const data = (await res.json()) as { answer: string };
-      setSectorMessages([...nextMessages, { role: "assistant", content: data.answer }]);
-    } catch (err) {
-      setSectorError(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
-      setSectorLoading(false);
     }
   }
 
@@ -566,77 +523,6 @@ export function PlayerComparison({
           {qaError ? <p className="text-xs text-destructive">{qaError}</p> : null}
         </div>
 
-      {/* ── Sector Q&A ── */}
-      <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-xs font-semibold text-foreground">
-              Ask about {subsectorName}
-            </p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Sector-level strategy, competitive dynamics, macro trends — no company selection needed.
-            </p>
-          </div>
-          {sectorMessages.length > 0 ? (
-            <button
-              type="button"
-              onClick={() => { setSectorMessages([]); setSectorInput(""); setSectorError(null); }}
-              className="text-xs text-muted-foreground hover:text-foreground"
-            >
-              Clear
-            </button>
-          ) : null}
-        </div>
-
-        {sectorMessages.length > 0 ? (
-          <div ref={sectorChatRef} className="flex max-h-[28rem] flex-col gap-3 overflow-y-auto rounded-lg border border-border bg-muted/40 p-3">
-            {sectorMessages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div
-                  className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
-                    msg.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "border border-border bg-card text-foreground"
-                  }`}
-                >
-                  {msg.role === "assistant" ? <Markdown>{msg.content}</Markdown> : msg.content}
-                </div>
-              </div>
-            ))}
-            {sectorLoading ? (
-              <div className="flex justify-start">
-                <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
-                  <Loader2Icon className="size-3 animate-spin" />
-                  Thinking…
-                </div>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-
-        <form onSubmit={handleAskSector} className="flex gap-2">
-          <input
-            value={sectorInput}
-            onChange={(e) => setSectorInput(e.target.value)}
-            placeholder={
-              sectorMessages.length === 0
-                ? `e.g. What are the structural tailwinds in ${subsectorName}?`
-                : "Ask a follow-up…"
-            }
-            disabled={sectorLoading}
-            className="flex-1 rounded-md border border-input px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
-          />
-          <button
-            type="submit"
-            disabled={sectorLoading || !sectorInput.trim()}
-            className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
-          >
-            {sectorLoading ? <Loader2Icon className="size-4 animate-spin" /> : <SearchIcon className="size-4" />}
-            Ask
-          </button>
-        </form>
-        {sectorError ? <p className="text-xs text-destructive">{sectorError}</p> : null}
-      </div>
     </div>
   );
 }

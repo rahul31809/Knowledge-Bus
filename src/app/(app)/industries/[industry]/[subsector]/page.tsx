@@ -9,6 +9,7 @@ import { SourceLink } from "@/components/industry-primer/source-link";
 import { StatRow } from "@/components/industry-primer/stat-row";
 import { TaggedCardGrid, impactVariant, maturityVariant } from "@/components/industry-primer/tagged-card-grid";
 import { ValueChainDiagram } from "@/components/industry-primer/value-chain-diagram";
+import { ResetPrimerButton } from "@/components/industry-primer/reset-primer-button";
 import { generateIndustryPrimer } from "@/lib/industry-primers/generator";
 import { findSubsector } from "@/lib/industry-taxonomy";
 import { fetchIndustryPrimer, fetchIndustryPrimerNotes, saveIndustryPrimer } from "@/lib/queries";
@@ -255,9 +256,12 @@ export default async function IndustryPrimerPage({
             </div>
           </section>
 
-          <p className="text-xs text-muted-foreground">
-            Generated {new Date(primer.generated_at).toLocaleDateString()} — AI-generated, verify key figures.
-          </p>
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-xs text-muted-foreground">
+              Generated {new Date(primer.generated_at).toLocaleDateString()} — AI-generated, verify key figures.
+            </p>
+            <ResetPrimerButton industrySlug={industrySlug} subsectorSlug={subsectorSlug} />
+          </div>
 
           <PrimerQaBox
             industrySlug={industrySlug}
