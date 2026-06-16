@@ -37,6 +37,7 @@ export function PlayerComparison({
 }) {
   const [customNames, setCustomNames] = useState<string[]>([]);
   const [customInput, setCustomInput] = useState("");
+  const [isAddingCustom, setIsAddingCustom] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [result, setResult] = useState<PrimerComparisonResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -102,6 +103,7 @@ export function PlayerComparison({
       });
     }
     setCustomInput("");
+    setIsAddingCustom(false);
   }
 
   function removeCustom(name: string) {
@@ -259,31 +261,65 @@ export function PlayerComparison({
             </label>
           );
         })}
-      </div>
 
-      <form onSubmit={handleAddCustom} className="flex gap-2">
-        <input
-          value={customInput}
-          onChange={(e) => setCustomInput(e.target.value)}
-          placeholder={
-            selected.size === 0
-              ? "Select at least 2 companies above before adding a custom one"
-              : selected.size === 1
-              ? "Select 1 more company above — or add a custom one to complete your comparison"
-              : "Add a custom company to the comparison (optional 3rd player)…"
-          }
-          disabled={selected.size < 2}
-          className="flex-1 rounded-md border border-input px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-        />
-        <button
-          type="submit"
-          disabled={!customInput.trim() || selected.size < 2}
-          className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground disabled:opacity-50"
-        >
-          <PlusIcon className="size-4" />
-          Add
-        </button>
-      </form>
+        {/* Any Other Company card */}
+        {selected.size < 3 ? (
+          <div
+            role="button"
+            tabIndex={0}
+            className={`flex items-center gap-3 rounded-lg border border-dashed p-3 transition-colors ${
+              isAddingCustom
+                ? "border-primary/50 bg-accent/20"
+                : "cursor-pointer border-border bg-card hover:border-primary/40 hover:bg-accent/10"
+            }`}
+            onClick={() => { if (!isAddingCustom) setIsAddingCustom(true); }}
+            onKeyDown={(e) => { if (e.key === "Enter" && !isAddingCustom) setIsAddingCustom(true); }}
+          >
+            {isAddingCustom ? (
+              <form
+                onSubmit={handleAddCustom}
+                className="flex w-full items-center gap-2"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <PlusIcon className="size-4 shrink-0 text-muted-foreground" />
+                <input
+                  autoFocus
+                  value={customInput}
+                  onChange={(e) => setCustomInput(e.target.value)}
+                  placeholder="Type company name and press Enter…"
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") { setIsAddingCustom(false); setCustomInput(""); }
+                  }}
+                  onBlur={() => { if (!customInput.trim()) setIsAddingCustom(false); }}
+                  className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                />
+                <button
+                  type="submit"
+                  disabled={!customInput.trim()}
+                  className="shrink-0 text-xs font-semibold text-primary disabled:opacity-40"
+                >
+                  Add
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setIsAddingCustom(false); setCustomInput(""); }}
+                  className="shrink-0 text-muted-foreground hover:text-foreground"
+                >
+                  <XIcon className="size-3.5" />
+                </button>
+              </form>
+            ) : (
+              <>
+                <PlusIcon className="size-4 shrink-0 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Any Other Company</p>
+                  <p className="text-xs text-muted-foreground/70">Add a company not listed above</p>
+                </div>
+              </>
+            )}
+          </div>
+        ) : null}
+      </div>
 
       <div className="flex flex-wrap items-center gap-3">
         <button
