@@ -255,17 +255,17 @@ export default async function IndustryPrimerPage({
             </div>
           </section>
 
+          <SectorQaSection
+            industryName={industry.name}
+            subsectorName={subsector.name}
+          />
+
           <div className="flex items-center justify-between gap-4">
             <p className="text-xs text-muted-foreground">
               Generated {new Date(primer.generated_at).toLocaleDateString()} — AI-generated, verify key figures.
             </p>
             <ResetPrimerButton industrySlug={industrySlug} subsectorSlug={subsectorSlug} />
           </div>
-
-          <SectorQaSection
-            industryName={industry.name}
-            subsectorName={subsector.name}
-          />
         </div>
       ) : null}
     </div>
