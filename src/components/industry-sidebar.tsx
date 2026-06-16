@@ -15,14 +15,11 @@ export function IndustrySidebar() {
     () => new Set(activeIndustrySlug ? [activeIndustrySlug] : [])
   );
 
-  // Adjust state during render (not in an effect) when navigation changes the
-  // active industry, so its section auto-expands without collapsing others.
+  // When navigation changes active industry, collapse all others and open the new one.
   const [trackedActiveSlug, setTrackedActiveSlug] = useState(activeIndustrySlug);
   if (activeIndustrySlug && activeIndustrySlug !== trackedActiveSlug) {
     setTrackedActiveSlug(activeIndustrySlug);
-    if (!openSlugs.has(activeIndustrySlug)) {
-      setOpenSlugs(new Set(openSlugs).add(activeIndustrySlug));
-    }
+    setOpenSlugs(new Set([activeIndustrySlug]));
   }
 
   return (
@@ -37,12 +34,7 @@ export function IndustrySidebar() {
                 open={isOpen}
                 onToggle={(e) => {
                   const open = e.currentTarget.open;
-                  setOpenSlugs((prev) => {
-                    const next = new Set(prev);
-                    if (open) next.add(industry.slug);
-                    else next.delete(industry.slug);
-                    return next;
-                  });
+                  setOpenSlugs(open ? new Set([industry.slug]) : new Set());
                 }}
               >
                 <summary className="cursor-pointer list-none rounded-md px-2 py-1.5 text-sm font-medium text-foreground hover:bg-accent">

@@ -233,42 +233,6 @@ export function PlayerComparison({
         {error ? <p className="text-xs text-destructive">{error}</p> : null}
       </div>
 
-      {selected.size >= 2 ? (
-        <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
-          <div>
-            <p className="text-xs font-semibold text-foreground">
-              Ask about {Array.from(selected).join(" vs ")}
-            </p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Ask any question — Gemini answers with respect to only these companies.
-            </p>
-          </div>
-          <form onSubmit={handleAskPlayers} className="flex gap-2">
-            <input
-              value={qaQuestion}
-              onChange={(e) => setQaQuestion(e.target.value)}
-              placeholder="e.g. Which has a stronger competitive moat and why?"
-              disabled={qaLoading}
-              className="flex-1 rounded-md border border-input px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
-            />
-            <button
-              type="submit"
-              disabled={qaLoading || !qaQuestion.trim()}
-              className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
-            >
-              {qaLoading ? <Loader2Icon className="size-4 animate-spin" /> : <SearchIcon className="size-4" />}
-              Ask
-            </button>
-          </form>
-          {qaError ? <p className="text-xs text-destructive">{qaError}</p> : null}
-          {qaAnswer ? (
-            <div className="rounded-lg border border-border bg-muted p-3">
-              <Markdown>{qaAnswer}</Markdown>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-
       {result && result.rows.length > 0 ? (
         <div className="flex flex-col gap-3">
           {result.synthesis ? (
@@ -302,6 +266,42 @@ export function PlayerComparison({
               </tbody>
             </table>
           </div>
+        </div>
+      ) : null}
+
+      {selected.size >= 2 ? (
+        <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
+          <div>
+            <p className="text-xs font-semibold text-foreground">
+              Ask about {Array.from(selected).join(" vs ")}
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Ask any question — answered as a McKinsey consultant, scoped to only these companies.
+            </p>
+          </div>
+          <form onSubmit={handleAskPlayers} className="flex gap-2">
+            <input
+              value={qaQuestion}
+              onChange={(e) => setQaQuestion(e.target.value)}
+              placeholder="e.g. Which has a stronger competitive moat and why?"
+              disabled={qaLoading}
+              className="flex-1 rounded-md border border-input px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
+            />
+            <button
+              type="submit"
+              disabled={qaLoading || !qaQuestion.trim()}
+              className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+            >
+              {qaLoading ? <Loader2Icon className="size-4 animate-spin" /> : <SearchIcon className="size-4" />}
+              Ask
+            </button>
+          </form>
+          {qaError ? <p className="text-xs text-destructive">{qaError}</p> : null}
+          {qaAnswer ? (
+            <div className="rounded-lg border border-border bg-muted p-3 text-sm text-foreground">
+              <Markdown>{qaAnswer}</Markdown>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
