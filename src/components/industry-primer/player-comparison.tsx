@@ -285,11 +285,11 @@ export function PlayerComparison({
             <div
               role={disabled ? undefined : "button"}
               tabIndex={disabled ? undefined : 0}
-              className={`flex items-center gap-3 rounded-lg border border-dashed p-3 transition-colors ${
+              className={`flex items-start gap-3 rounded-lg border p-3 transition-colors ${
                 disabled
-                  ? "cursor-not-allowed border-border opacity-50"
+                  ? "cursor-not-allowed border-border bg-card opacity-50"
                   : isAddingCustom
-                  ? "border-primary/50 bg-accent/20"
+                  ? "border-primary/40 bg-accent"
                   : "cursor-pointer border-border bg-card hover:border-primary/40 hover:bg-accent/10"
               }`}
               onClick={() => { if (!disabled && !isAddingCustom) setIsAddingCustom(true); }}
@@ -301,7 +301,7 @@ export function PlayerComparison({
                   className="flex w-full items-center gap-2"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <PlusIcon className="size-4 shrink-0 text-muted-foreground" />
+                  <PlusIcon className="mt-1 size-4 shrink-0 text-muted-foreground" />
                   <input
                     autoFocus
                     value={customInput}
@@ -330,10 +330,10 @@ export function PlayerComparison({
                 </form>
               ) : (
                 <>
-                  <PlusIcon className="size-4 shrink-0 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Any Other Company</p>
-                    <p className="text-xs text-muted-foreground/70">{hint}</p>
+                  <PlusIcon className="mt-1 size-4 shrink-0 text-muted-foreground" />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-foreground">Any Other Company</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
                   </div>
                 </>
               )}
@@ -342,26 +342,28 @@ export function PlayerComparison({
         })() : null}
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={handleCompare}
-          disabled={selected.size < 2 || loading}
-          className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
-        >
-          {loading ? <Loader2Icon className="size-4 animate-spin" /> : null}
-          Compare Selected ({selected.size})
-        </button>
-        <button
-          type="button"
-          onClick={handleFinancials}
-          disabled={selected.size < 1 || financialsLoading}
-          className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground disabled:opacity-50"
-        >
-          {financialsLoading ? <Loader2Icon className="size-4 animate-spin" /> : null}
-          Financial Data
-        </button>
-        <p className="text-xs text-muted-foreground">Compare requires 2–3 · Financial Data works with 1+.</p>
+      <div className="flex flex-col gap-1.5">
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={handleCompare}
+            disabled={selected.size < 2 || loading}
+            className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+          >
+            {loading ? <Loader2Icon className="size-4 animate-spin" /> : null}
+            Compare Selected ({selected.size})
+          </button>
+          <button
+            type="button"
+            onClick={handleFinancials}
+            disabled={selected.size < 1 || financialsLoading}
+            className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground disabled:opacity-50"
+          >
+            {financialsLoading ? <Loader2Icon className="size-4 animate-spin" /> : null}
+            Financials Comparison
+          </button>
+        </div>
+        <p className="text-xs italic text-muted-foreground">Compare requires 2–3 companies · Financials Comparison works with 1+.</p>
         {error ? <p className="text-xs text-destructive">{error}</p> : null}
         {financialsError ? <p className="text-xs text-destructive">{financialsError}</p> : null}
       </div>
@@ -404,7 +406,7 @@ export function PlayerComparison({
 
       {activePanel === "financials" && financials ? (
         <div className="flex flex-col gap-2">
-          <p className="text-sm font-semibold text-foreground">Financial Data</p>
+          <p className="text-sm font-semibold text-foreground">Financials Comparison</p>
           <FinancialComparison companies={financials} />
         </div>
       ) : null}
