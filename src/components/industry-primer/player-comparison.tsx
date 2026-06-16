@@ -296,15 +296,18 @@ export function PlayerComparison({
         </div>
       ) : null}
 
-      {selected.size >= 2 ? (
-        <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
+      <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-semibold text-foreground">
-                Ask about {Array.from(selected).join(" vs ")}
+                {selected.size >= 2
+                  ? `Ask about ${Array.from(selected).join(" vs ")}`
+                  : "Ask about selected companies"}
               </p>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                McKinsey-style answers scoped to only these companies. Ask follow-ups freely.
+                {selected.size >= 2
+                  ? "McKinsey-style answers scoped to only these companies. Ask follow-ups freely."
+                  : "Select at least 2 companies above to start asking questions."}
               </p>
             </div>
             {qaMessages.length > 0 ? (
@@ -349,16 +352,18 @@ export function PlayerComparison({
               value={qaInput}
               onChange={(e) => setQaInput(e.target.value)}
               placeholder={
-                qaMessages.length === 0
+                selected.size < 2
+                  ? "Select 2+ companies to ask…"
+                  : qaMessages.length === 0
                   ? "e.g. Which has a stronger competitive moat and why?"
                   : "Ask a follow-up…"
               }
-              disabled={qaLoading}
+              disabled={qaLoading || selected.size < 2}
               className="flex-1 rounded-md border border-input px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
             />
             <button
               type="submit"
-              disabled={qaLoading || !qaInput.trim()}
+              disabled={qaLoading || !qaInput.trim() || selected.size < 2}
               className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
               {qaLoading ? <Loader2Icon className="size-4 animate-spin" /> : <SearchIcon className="size-4" />}
@@ -367,7 +372,6 @@ export function PlayerComparison({
           </form>
           {qaError ? <p className="text-xs text-destructive">{qaError}</p> : null}
         </div>
-      ) : null}
     </div>
   );
 }
