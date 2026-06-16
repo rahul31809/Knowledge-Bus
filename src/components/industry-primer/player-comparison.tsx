@@ -233,12 +233,19 @@ export function PlayerComparison({
         <input
           value={customInput}
           onChange={(e) => setCustomInput(e.target.value)}
-          placeholder="Add another company to compare…"
-          className="flex-1 rounded-md border border-input px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          placeholder={
+            selected.size === 0
+              ? "Select at least 2 companies above before adding a custom one"
+              : selected.size === 1
+              ? "Select 1 more company above — or add a custom one to complete your comparison"
+              : "Add a custom company to the comparison (optional 3rd player)…"
+          }
+          disabled={selected.size < 2}
+          className="flex-1 rounded-md border border-input px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
         />
         <button
           type="submit"
-          disabled={!customInput.trim()}
+          disabled={!customInput.trim() || selected.size < 2}
           className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground disabled:opacity-50"
         >
           <PlusIcon className="size-4" />
