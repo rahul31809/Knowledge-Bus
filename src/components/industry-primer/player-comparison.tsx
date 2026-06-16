@@ -44,10 +44,11 @@ export function PlayerComparison({
   const [qaInput, setQaInput] = useState("");
   const [qaLoading, setQaLoading] = useState(false);
   const [qaError, setQaError] = useState<string | null>(null);
-  const chatBottomRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = chatContainerRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [qaMessages, qaLoading]);
 
   if (players.length === 0) return null;
@@ -314,7 +315,7 @@ export function PlayerComparison({
           </div>
 
           {qaMessages.length > 0 ? (
-            <div className="flex max-h-[28rem] flex-col gap-3 overflow-y-auto rounded-lg border border-border bg-muted/40 p-3">
+            <div ref={chatContainerRef} className="flex max-h-[28rem] flex-col gap-3 overflow-y-auto rounded-lg border border-border bg-muted/40 p-3">
               {qaMessages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                   <div
@@ -336,7 +337,6 @@ export function PlayerComparison({
                   </div>
                 </div>
               ) : null}
-              <div ref={chatBottomRef} />
             </div>
           ) : null}
 
