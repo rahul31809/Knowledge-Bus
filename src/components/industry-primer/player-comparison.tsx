@@ -354,27 +354,46 @@ export function PlayerComparison({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={handleCompare}
-            disabled={selected.size < 2 || loading}
-            className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
-          >
-            {loading ? <Loader2Icon className="size-4 animate-spin" /> : null}
-            Compare Selected ({selected.size})
-          </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Compare Players — with tooltip */}
+          <div className="group relative">
+            <button
+              type="button"
+              onClick={handleCompare}
+              disabled={selected.size < 2 || loading}
+              className={`inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
+                activePanel === "compare"
+                  ? "bg-primary text-primary-foreground"
+                  : "border border-border bg-card text-foreground hover:bg-accent"
+              }`}
+            >
+              {loading ? <Loader2Icon className="size-4 animate-spin" /> : null}
+              Compare Players{selected.size >= 2 ? ` (${selected.size})` : ""}
+            </button>
+            <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-popover px-2.5 py-1.5 text-xs text-popover-foreground shadow-md opacity-0 transition-opacity group-hover:opacity-100">
+              {selected.size === 0
+                ? "Select at least 2 companies to compare"
+                : selected.size === 1
+                ? "Select one more company — up to 3 may be compared"
+                : `Compare ${selected.size} selected companies`}
+            </div>
+          </div>
+
           <button
             type="button"
             onClick={handleFinancials}
             disabled={selected.size < 1 || financialsLoading}
-            className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground disabled:opacity-50"
+            className={`inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
+              activePanel === "financials"
+                ? "bg-primary text-primary-foreground"
+                : "border border-border bg-card text-foreground hover:bg-accent"
+            }`}
           >
             {financialsLoading ? <Loader2Icon className="size-4 animate-spin" /> : null}
             Financials Comparison
           </button>
         </div>
-        <p className="text-xs italic text-muted-foreground">Compare requires 2–3 companies · Financials Comparison works with 1+.</p>
+        <p className="text-xs italic text-muted-foreground">Compare Players requires 2–3 · Financials Comparison works with 1+.</p>
         {error ? <p className="text-xs text-destructive">{error}</p> : null}
         {financialsError ? <p className="text-xs text-destructive">{financialsError}</p> : null}
       </div>

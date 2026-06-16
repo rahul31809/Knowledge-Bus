@@ -86,6 +86,11 @@ export async function POST(request: Request) {
 
     const prompt = `You are a financial research analyst with deep knowledge of company annual reports, stock exchange filings, and investor presentations.
 
+Today's date is June 2026. Use this to determine the most recent completed fiscal years.
+- Indian companies (March 31 year-end): FY2026 ended March 31 2026, FY2025 ended March 31 2025, FY2024 ended March 31 2024. Include FY2026 if data is available, otherwise FY2025 as the most recent.
+- Calendar year companies: FY2025 (Jan–Dec 2025) is the most recent completed year.
+- Always include the 3 most recently COMPLETED fiscal years, most recent first.
+
 Provide financial data for the following companies operating in the "${subsectorName}" sub-sector of "${industryName}":
 ${playerList}
 
@@ -99,7 +104,7 @@ Return a JSON array. Each element must follow this exact schema:
     "dataNote": "e.g. 'FY ends March 31' or 'consolidated financials' — keep to one short phrase",
     "years": [
       {
-        "year": "FY2024",
+        "year": "FY2025",
         "revenue": <number or null>,
         "grossProfit": <number or null>,
         "operatingIncome": <number or null>,
@@ -133,7 +138,7 @@ Return a JSON array. Each element must follow this exact schema:
 ]
 
 Rules:
-- Include the 3 most recent completed fiscal years, most recent first
+- Include the 3 most recent completed fiscal years, most recent first (see date context above — FY2025 or FY2026 should be the latest for most companies)
 - Use real data from annual reports or stock exchange filings — do not fabricate numbers
 - For Indian companies: all monetary values in ₹ Crores
 - For US/global companies: all monetary values in $ Millions
