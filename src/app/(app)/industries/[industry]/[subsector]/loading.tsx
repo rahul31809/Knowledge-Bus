@@ -59,7 +59,10 @@ export default function IndustryPrimerLoading() {
         <Skeleton className="mt-2 h-4 w-40" />
       </div>
 
-      <p className="text-sm italic text-muted-foreground">{quip}</p>
+      <div className="rounded-xl border border-border bg-card px-6 py-5 text-center shadow-sm">
+        <p className="text-base font-bold text-foreground">{quip}</p>
+        <p className="mt-1.5 text-xs text-muted-foreground">Hang tight — primers are generated once and cached after this.</p>
+      </div>
 
       <div className="flex flex-col gap-4">
         <div className="rounded-lg border border-border bg-card p-4">

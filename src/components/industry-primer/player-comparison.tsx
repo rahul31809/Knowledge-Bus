@@ -54,6 +54,17 @@ export function PlayerComparison({
   const [qaError, setQaError] = useState<string | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
+  const [qaSubtitle] = useState(() => {
+    const lines = [
+      "No billable hours. Ask anything.",
+      "Partner-level answers. Zero slide decks.",
+      "Think of it as a senior partner on speed dial.",
+      "Straight talk, no deck. Fire away.",
+      "Your personal partner. Ask anything — no judgment.",
+    ];
+    return lines[Math.floor(Math.random() * lines.length)];
+  });
+
   useEffect(() => {
     const el = chatContainerRef.current;
     if (el) el.scrollTop = el.scrollHeight;
@@ -421,8 +432,8 @@ export function PlayerComparison({
               </p>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {selected.size >= 1
-                  ? "McKinsey-style answers scoped to only these companies. Ask follow-ups freely."
-                  : "Select at least 1 company above to start asking questions."}
+                  ? qaSubtitle
+                  : "Pick a company. The partner is waiting."}
               </p>
             </div>
             {qaMessages.length > 0 ? (
