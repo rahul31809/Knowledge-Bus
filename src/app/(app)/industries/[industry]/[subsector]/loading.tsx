@@ -1,5 +1,18 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
+const LOADING_QUIPS = [
+  "Our AI intern is speed-reading every analyst report ever written. Hang on.",
+  "Summoning a McKinsey partner from the cloud. This takes exactly as long as it needs to.",
+  "The AI went to B-school for this. Give it a moment.",
+  "Pulling an all-nighter on your behalf. Coffee's brewing.",
+  "Reading the annual report so you never have to.",
+  "Pretending it attended every earnings call since 2015.",
+  "No Excel was harmed in the making of this primer.",
+  "Consulting the oracle. (Not that Oracle.)",
+  "Writing the 40-page deck you don't have time to read.",
+  "The AI is in back-to-back syncs. Won't be a minute.",
+];
+
 function StatRowSkeleton() {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -35,6 +48,8 @@ function CardGridSkeleton({ count = 4 }: { count?: number }) {
 }
 
 export default function IndustryPrimerLoading() {
+  const quip = LOADING_QUIPS[Math.floor(Math.random() * LOADING_QUIPS.length)];
+
   return (
     <div className="flex flex-col gap-6">
       <Skeleton className="h-4 w-48" />
@@ -44,7 +59,7 @@ export default function IndustryPrimerLoading() {
         <Skeleton className="mt-2 h-4 w-40" />
       </div>
 
-      <p className="text-sm text-muted-foreground">Generating this primer for the first time — this can take up to a minute…</p>
+      <p className="text-sm italic text-muted-foreground">{quip}</p>
 
       <div className="flex flex-col gap-4">
         <div className="rounded-lg border border-border bg-card p-4">
