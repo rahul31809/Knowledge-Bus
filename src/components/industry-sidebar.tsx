@@ -27,7 +27,7 @@ export function IndustrySidebar() {
 
   return (
     <nav className="w-full shrink-0 sm:w-64">
-      <h2 className="mb-2 px-2 text-xs font-semibold tracking-wide text-neutral-500 uppercase">Industries</h2>
+      <h2 className="mb-2 px-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Industries</h2>
       <ul className="flex flex-col gap-0.5">
         {INDUSTRY_TAXONOMY.map((industry) => {
           const isOpen = openSlugs.has(industry.slug);
@@ -45,10 +45,10 @@ export function IndustrySidebar() {
                   });
                 }}
               >
-                <summary className="cursor-pointer list-none rounded-md px-2 py-1.5 text-sm font-medium text-neutral-800 hover:bg-neutral-100">
+                <summary className="cursor-pointer list-none rounded-md px-2 py-1.5 text-sm font-medium text-foreground hover:bg-accent">
                   {industry.name}
                 </summary>
-                <ul className="mt-0.5 mb-1 ml-2 flex flex-col gap-0.5 border-l border-neutral-200 pl-3">
+                <ul className="mt-0.5 mb-1 ml-2 flex flex-col gap-0.5 border-l border-border pl-3">
                   {industry.subsectors.map((subsector) => {
                     const isActive =
                       industry.slug === activeIndustrySlug && subsector.slug === activeSubsectorSlug;
@@ -58,8 +58,8 @@ export function IndustrySidebar() {
                           href={`/industries/${industry.slug}/${subsector.slug}`}
                           className={`block rounded-md px-2 py-1 text-sm ${
                             isActive
-                              ? "bg-neutral-900 text-white"
-                              : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
+                              ? "bg-primary text-primary-foreground"
+                              : "text-muted-foreground hover:bg-accent hover:text-foreground"
                           }`}
                         >
                           {subsector.name}

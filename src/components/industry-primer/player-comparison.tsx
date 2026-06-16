@@ -1,0 +1,235 @@
+"use client";
+
+import { Loader2Icon, PlusIcon, XIcon } from "lucide-react";
+import { useState } from "react";
+import type { FormEvent } from "react";
+import type { PrimerComparisonResult, PrimerPlayer } from "@/lib/types";
+import { Markdown } from "./markdown";
+import { SourceLink } from "./source-link";
+import { TAG_STYLES, originVariant } from "./tagged-card-grid";
+
+interface Candidate {
+  name: string;
+  origin?: "Indian" | "Global";
+  positioning?: string;
+  custom?: boolean;
+}
+
+export function PlayerComparison({
+  players,
+  industryName,
+  subsectorName,
+  searchContext,
+}: {
+  players: PrimerPlayer[];
+  industryName: string;
+  subsectorName: string;
+  searchContext: string;
+}) {
+  const [customNames, setCustomNames] = useState<string[]>([]);
+  const [customInput, setCustomInput] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [result, setResult] = useState<PrimerComparisonResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (players.length === 0) return null;
+
+  const candidates: Candidate[] = [
+    ...players.map((p) => ({ name: p.name, origin: p.origin, positioning: p.positioning, custom: false })),
+    ...customNames.map((name) => ({ name, custom: true })),
+  ];
+
+  function toggle(name: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) {
+        next.delete(name);
+      } else if (next.size < 3) {
+        next.add(name);
+      }
+      return next;
+    });
+    setResult(null);
+    setError(null);
+  }
+
+  function handleAddCustom(event: FormEvent) {
+    event.preventDefault();
+    const name = customInput.trim();
+    if (!name) return;
+
+    const exists = candidates.some((c) => c.name.toLowerCase() === name.toLowerCase());
+    if (!exists) {
+      setCustomNames((prev) => [...prev, name]);
+      setSelected((prev) => {
+        if (prev.size >= 3) return prev;
+        const next = new Set(prev);
+        next.add(name);
+        return next;
+      });
+    }
+    setCustomInput("");
+  }
+
+  function removeCustom(name: string) {
+    setCustomNames((prev) => prev.filter((n) => n !== name));
+    setSelected((prev) => {
+      if (!prev.has(name)) return prev;
+      const next = new Set(prev);
+      next.delete(name);
+      return next;
+    });
+    setResult(null);
+    setError(null);
+  }
+
+  async function handleCompare() {
+    setLoading(true);
+    setError(null);
+    try {
+      const chosen = candidates
+        .filter((c) => selected.has(c.name))
+        .map((c) =>
+          c.custom ? { name: c.name } : { name: c.name, origin: c.origin, positioning: c.positioning }
+        );
+      const res = await fetch("/api/industries/compare", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ industryName, subsectorName, players: chosen }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error ?? "Failed to generate comparison");
+      }
+      setResult((await res.json()) as PrimerComparisonResult);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        {candidates.map((candidate) => {
+          const checked = selected.has(candidate.name);
+          const disabled = !checked && selected.size >= 3;
+          return (
+            <label
+              key={candidate.name}
+              className={`flex items-start gap-3 rounded-lg border p-3 ${
+                checked ? "border-primary/40 bg-accent" : "border-border bg-card"
+              } ${disabled ? "opacity-50" : "cursor-pointer"}`}
+            >
+              <input
+                type="checkbox"
+                checked={checked}
+                disabled={disabled}
+                onChange={() => toggle(candidate.name)}
+                className="mt-1 size-4"
+              />
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <SourceLink query={`${candidate.name} ${searchContext}`}>
+                    <p className="text-sm font-semibold text-foreground">{candidate.name}</p>
+                  </SourceLink>
+                  {candidate.custom ? (
+                    <span className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium ${TAG_STYLES.neutral}`}>
+                      Custom
+                    </span>
+                  ) : (
+                    <span
+                      className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium ${TAG_STYLES[originVariant(candidate.origin!)]}`}
+                    >
+                      {candidate.origin}
+                    </span>
+                  )}
+                </div>
+                {candidate.positioning ? <p className="mt-1 text-xs text-muted-foreground">{candidate.positioning}</p> : null}
+              </div>
+              {candidate.custom ? (
+                <button
+                  type="button"
+                  onClick={() => removeCustom(candidate.name)}
+                  title="Remove"
+                  className="shrink-0 text-muted-foreground hover:text-foreground"
+                >
+                  <XIcon className="size-4" />
+                </button>
+              ) : null}
+            </label>
+          );
+        })}
+      </div>
+
+      <form onSubmit={handleAddCustom} className="flex gap-2">
+        <input
+          value={customInput}
+          onChange={(e) => setCustomInput(e.target.value)}
+          placeholder="Add another company to compare…"
+          className="flex-1 rounded-md border border-input px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+        <button
+          type="submit"
+          disabled={!customInput.trim()}
+          className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground disabled:opacity-50"
+        >
+          <PlusIcon className="size-4" />
+          Add
+        </button>
+      </form>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={handleCompare}
+          disabled={selected.size < 2 || loading}
+          className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+        >
+          {loading ? <Loader2Icon className="size-4 animate-spin" /> : null}
+          Compare Selected ({selected.size})
+        </button>
+        <p className="text-xs text-muted-foreground">Pick 2-3 players to compare on relevant parameters.</p>
+        {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      </div>
+
+      {result && result.rows.length > 0 ? (
+        <div className="flex flex-col gap-3">
+          {result.synthesis ? (
+            <div className="rounded-lg border border-border bg-muted p-3">
+              <Markdown>{result.synthesis}</Markdown>
+            </div>
+          ) : null}
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-muted">
+                <tr>
+                  <th className="p-2 text-xs font-medium text-muted-foreground">Parameter</th>
+                  {result.rows.map((row) => (
+                    <th key={row.player} className="p-2 text-xs font-semibold text-foreground">
+                      {row.player}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {result.parameters.map((param, i) => (
+                  <tr key={param} className="border-t border-border">
+                    <td className="p-2 text-xs font-medium text-muted-foreground">{param}</td>
+                    {result.rows.map((row) => (
+                      <td key={row.player} className="p-2 text-xs text-foreground">
+                        {row.values[i] ?? "—"}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
