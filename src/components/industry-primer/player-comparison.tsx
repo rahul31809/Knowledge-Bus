@@ -19,11 +19,13 @@ export function PlayerComparison({
   players,
   industryName,
   subsectorName,
+  subsectorSlug,
   searchContext,
 }: {
   players: PrimerPlayer[];
   industryName: string;
   subsectorName: string;
+  subsectorSlug: string;
   searchContext: string;
 }) {
   const [customNames, setCustomNames] = useState<string[]>([]);
@@ -96,7 +98,7 @@ export function PlayerComparison({
       const res = await fetch("/api/industries/compare", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ industryName, subsectorName, players: chosen }),
+        body: JSON.stringify({ industryName, subsectorName, subsectorSlug, players: chosen }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => null);

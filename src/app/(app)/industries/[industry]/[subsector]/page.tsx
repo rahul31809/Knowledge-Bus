@@ -208,6 +208,7 @@ export default async function IndustryPrimerPage({
                 players={primer.major_players.players}
                 industryName={industry.name}
                 subsectorName={subsector.name}
+                subsectorSlug={subsectorSlug}
                 searchContext={searchContext}
               />
             </div>
