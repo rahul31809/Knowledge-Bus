@@ -115,7 +115,7 @@ export function PlayerComparison({
   async function handleAskPlayers(event: FormEvent) {
     event.preventDefault();
     const q = qaInput.trim();
-    if (!q || qaLoading || selected.size < 2) return;
+    if (!q || qaLoading || selected.size < 1) return;
 
     const userMsg: QaMessage = { role: "user", content: q };
     const nextMessages = [...qaMessages, userMsg];
@@ -300,14 +300,14 @@ export function PlayerComparison({
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-semibold text-foreground">
-                {selected.size >= 2
+                {selected.size >= 1
                   ? `Ask about ${Array.from(selected).join(" vs ")}`
                   : "Ask about selected companies"}
               </p>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                {selected.size >= 2
+                {selected.size >= 1
                   ? "McKinsey-style answers scoped to only these companies. Ask follow-ups freely."
-                  : "Select at least 2 companies above to start asking questions."}
+                  : "Select at least 1 company above to start asking questions."}
               </p>
             </div>
             {qaMessages.length > 0 ? (
@@ -352,18 +352,18 @@ export function PlayerComparison({
               value={qaInput}
               onChange={(e) => setQaInput(e.target.value)}
               placeholder={
-                selected.size < 2
-                  ? "Select 2+ companies to ask…"
+                selected.size < 1
+                  ? "Select a company to ask…"
                   : qaMessages.length === 0
                   ? "e.g. Which has a stronger competitive moat and why?"
                   : "Ask a follow-up…"
               }
-              disabled={qaLoading || selected.size < 2}
+              disabled={qaLoading || selected.size < 1}
               className="flex-1 rounded-md border border-input px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
             />
             <button
               type="submit"
-              disabled={qaLoading || !qaInput.trim() || selected.size < 2}
+              disabled={qaLoading || !qaInput.trim() || selected.size < 1}
               className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
               {qaLoading ? <Loader2Icon className="size-4 animate-spin" /> : <SearchIcon className="size-4" />}
