@@ -84,7 +84,8 @@ export function PlayerComparison({
   }
 
   function toggle(name: string) {
-    const willBeEmpty = selected.has(name) && selected.size === 1;
+    const isDeselecting = selected.has(name);
+    const willBeEmpty = isDeselecting && selected.size === 1;
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(name)) {
@@ -94,10 +95,18 @@ export function PlayerComparison({
       }
       return next;
     });
-    if (willBeEmpty) resetChat();
+    if (willBeEmpty) {
+      resetChat();
+      setFinancials(null);
+      setActivePanel(null);
+    } else if (isDeselecting) {
+      // Remove only this company from the cached financials; keep panel open
+      setFinancials((prev) => prev ? prev.filter((c) => c.name !== name) : null);
+    } else {
+      // Adding a new company — clear so re-fetch includes it
+      setFinancials(null);
+    }
     setResult(null);
-    setFinancials(null);
-    setActivePanel(null);
     setError(null);
   }
 
@@ -129,10 +138,14 @@ export function PlayerComparison({
       next.delete(name);
       return next;
     });
-    if (willBeEmpty) resetChat();
+    if (willBeEmpty) {
+      resetChat();
+      setFinancials(null);
+      setActivePanel(null);
+    } else {
+      setFinancials((prev) => prev ? prev.filter((c) => c.name !== name) : null);
+    }
     setResult(null);
-    setFinancials(null);
-    setActivePanel(null);
     setError(null);
   }
 

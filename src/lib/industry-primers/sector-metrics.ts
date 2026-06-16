@@ -162,6 +162,18 @@ export function getSectorMetricDefs(
     ];
   }
 
+  if (/defense|defence|aerospace|military|weapon|armament|ordnance/i.test(text)) {
+    return [
+      { key: "order_book",       label: "Order Book",                   hint: "Total outstanding order book in ₹ Crores, e.g. '₹94,000 Cr'" },
+      { key: "order_inflow",     label: "Order Inflow (YoY)",           hint: "New orders received in the year in ₹ Crores, e.g. '₹28,000 Cr'" },
+      { key: "book_to_bill",     label: "Book-to-Bill Ratio",           hint: "Order book ÷ trailing 12-month revenue, e.g. '3.5x'" },
+      { key: "export_share",     label: "Defence Export Share",         hint: "Export revenue as % of total defence revenue, e.g. '8%'" },
+      { key: "rd_spend",         label: "R&D Spend (% Revenue)",        hint: "R&D expenditure as % of revenue, e.g. '5.2%'" },
+      { key: "govt_revenue_pct", label: "Govt / MoD Revenue Share",     hint: "Revenue from Government / Ministry of Defence as %, e.g. '92%'" },
+      { key: "ebitda_margin",    label: "EBITDA Margin",                hint: "As %, e.g. '27%'" },
+    ];
+  }
+
   // No specific sector mapping found
   return null;
 }
