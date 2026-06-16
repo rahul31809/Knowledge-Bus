@@ -101,7 +101,7 @@ Some of these companies may not have an origin/positioning hint above — use yo
 Return a single JSON object with exactly this structure:
 
 {
-  "synthesis": "2-4 sentence 'so what' takeaway for a case interview, comparing these players at a strategic level — markdown allowed (e.g. **bold** for the key differentiator)",
+  "synthesis": "Structured consulting analysis in markdown. Use EXACTLY this format:\n\n**So What**\n[1-2 sentences — the single most important strategic differentiator between these players. Lead with the key conclusion, not background.]\n\n**Key Findings**\n[4-6 bullets. Each bullet must name the specific company in bold and cite a concrete metric, fact, or strategic observation. No generic statements.]\n\n**Consulting Angle**\n[1-2 sentences — how this comparison would appear in a case interview: which hypothesis it validates, what recommendation it informs, or what follow-up question it raises.]",
   "parameters": ["Parameter 1", "Parameter 2", "..."],
   "rows": [
     {"player": "${players[0].name}", "values": ["value for parameter 1", "value for parameter 2", "..."]}

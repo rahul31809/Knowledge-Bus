@@ -66,10 +66,16 @@ Rules:
 - If the question genuinely cannot be answered specifically about these companies, say so clearly and explain what information is needed.
 - Do not pad with background industry context unless it directly differentiates the companies.`;
 
-  const result = await ai.models.generateContent({
-    model: "gemini-2.0-flash",
-    contents: prompt,
-  });
+  let result;
+  try {
+    result = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: prompt,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Gemini API error";
+    return NextResponse.json({ error: msg }, { status: 502 });
+  }
 
   const answer = result.text?.trim() ?? "";
   if (!answer) {
