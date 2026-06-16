@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2Icon, PlusIcon, SearchIcon, XIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import type { PrimerComparisonResult, PrimerPlayer } from "@/lib/types";
 import { Markdown } from "./markdown";
@@ -13,6 +13,11 @@ interface Candidate {
   origin?: "Indian" | "Global";
   positioning?: string;
   custom?: boolean;
+}
+
+interface QaMessage {
+  role: "user" | "assistant";
+  content: string;
 }
 
 export function PlayerComparison({
@@ -35,10 +40,15 @@ export function PlayerComparison({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [qaQuestion, setQaQuestion] = useState("");
-  const [qaAnswer, setQaAnswer] = useState<string | null>(null);
+  const [qaMessages, setQaMessages] = useState<QaMessage[]>([]);
+  const [qaInput, setQaInput] = useState("");
   const [qaLoading, setQaLoading] = useState(false);
   const [qaError, setQaError] = useState<string | null>(null);
+  const chatBottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [qaMessages, qaLoading]);
 
   if (players.length === 0) return null;
 
@@ -46,6 +56,12 @@ export function PlayerComparison({
     ...players.map((p) => ({ name: p.name, origin: p.origin, positioning: p.positioning, custom: false })),
     ...customNames.map((name) => ({ name, custom: true })),
   ];
+
+  function resetChat() {
+    setQaMessages([]);
+    setQaInput("");
+    setQaError(null);
+  }
 
   function toggle(name: string) {
     setSelected((prev) => {
@@ -59,6 +75,7 @@ export function PlayerComparison({
     });
     setResult(null);
     setError(null);
+    resetChat();
   }
 
   function handleAddCustom(event: FormEvent) {
@@ -89,15 +106,21 @@ export function PlayerComparison({
     });
     setResult(null);
     setError(null);
+    resetChat();
   }
 
   async function handleAskPlayers(event: FormEvent) {
     event.preventDefault();
-    const q = qaQuestion.trim();
+    const q = qaInput.trim();
     if (!q || qaLoading || selected.size < 2) return;
+
+    const userMsg: QaMessage = { role: "user", content: q };
+    const nextMessages = [...qaMessages, userMsg];
+    setQaMessages(nextMessages);
+    setQaInput("");
     setQaLoading(true);
     setQaError(null);
-    setQaAnswer(null);
+
     try {
       const res = await fetch("/api/industries/ask-players", {
         method: "POST",
@@ -106,7 +129,7 @@ export function PlayerComparison({
           industryName,
           subsectorName,
           players: Array.from(selected),
-          question: q,
+          messages: nextMessages,
         }),
       });
       if (!res.ok) {
@@ -114,7 +137,7 @@ export function PlayerComparison({
         throw new Error(data?.error ?? "Failed to get an answer");
       }
       const data = (await res.json()) as { answer: string };
-      setQaAnswer(data.answer);
+      setQaMessages([...nextMessages, { role: "assistant", content: data.answer }]);
     } catch (err) {
       setQaError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -271,25 +294,68 @@ export function PlayerComparison({
 
       {selected.size >= 2 ? (
         <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
-          <div>
-            <p className="text-xs font-semibold text-foreground">
-              Ask about {Array.from(selected).join(" vs ")}
-            </p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Ask any question — answered as a McKinsey consultant, scoped to only these companies.
-            </p>
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-semibold text-foreground">
+                Ask about {Array.from(selected).join(" vs ")}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                McKinsey-style answers scoped to only these companies. Ask follow-ups freely.
+              </p>
+            </div>
+            {qaMessages.length > 0 ? (
+              <button
+                type="button"
+                onClick={resetChat}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                Clear
+              </button>
+            ) : null}
           </div>
+
+          {qaMessages.length > 0 ? (
+            <div className="flex max-h-[28rem] flex-col gap-3 overflow-y-auto rounded-lg border border-border bg-muted/40 p-3">
+              {qaMessages.map((msg, i) => (
+                <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                  <div
+                    className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
+                      msg.role === "user"
+                        ? "bg-primary text-primary-foreground"
+                        : "border border-border bg-card text-foreground"
+                    }`}
+                  >
+                    {msg.role === "assistant" ? <Markdown>{msg.content}</Markdown> : msg.content}
+                  </div>
+                </div>
+              ))}
+              {qaLoading ? (
+                <div className="flex justify-start">
+                  <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
+                    <Loader2Icon className="size-3 animate-spin" />
+                    Thinking…
+                  </div>
+                </div>
+              ) : null}
+              <div ref={chatBottomRef} />
+            </div>
+          ) : null}
+
           <form onSubmit={handleAskPlayers} className="flex gap-2">
             <input
-              value={qaQuestion}
-              onChange={(e) => setQaQuestion(e.target.value)}
-              placeholder="e.g. Which has a stronger competitive moat and why?"
+              value={qaInput}
+              onChange={(e) => setQaInput(e.target.value)}
+              placeholder={
+                qaMessages.length === 0
+                  ? "e.g. Which has a stronger competitive moat and why?"
+                  : "Ask a follow-up…"
+              }
               disabled={qaLoading}
               className="flex-1 rounded-md border border-input px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
             />
             <button
               type="submit"
-              disabled={qaLoading || !qaQuestion.trim()}
+              disabled={qaLoading || !qaInput.trim()}
               className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
               {qaLoading ? <Loader2Icon className="size-4 animate-spin" /> : <SearchIcon className="size-4" />}
@@ -297,11 +363,6 @@ export function PlayerComparison({
             </button>
           </form>
           {qaError ? <p className="text-xs text-destructive">{qaError}</p> : null}
-          {qaAnswer ? (
-            <div className="rounded-lg border border-border bg-muted p-3 text-sm text-foreground">
-              <Markdown>{qaAnswer}</Markdown>
-            </div>
-          ) : null}
         </div>
       ) : null}
     </div>

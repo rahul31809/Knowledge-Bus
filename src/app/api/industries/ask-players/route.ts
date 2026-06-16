@@ -4,11 +4,16 @@ import { createClient } from "@/lib/supabase/server";
 
 export const maxDuration = 60;
 
+interface QaMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
 interface AskPlayersRequestBody {
   industryName?: string;
   subsectorName?: string;
   players?: string[];
-  question?: string;
+  messages?: QaMessage[];
 }
 
 export async function POST(request: Request) {
@@ -25,9 +30,11 @@ export async function POST(request: Request) {
     const industryName = body.industryName?.trim();
     const subsectorName = body.subsectorName?.trim();
     const players = Array.isArray(body.players) ? body.players.filter(Boolean) : [];
-    const question = body.question?.trim();
+    const messages = Array.isArray(body.messages) ? body.messages : [];
 
-    if (!industryName || !subsectorName || players.length < 2 || !question) {
+    const lastUserMsg = messages.filter((m) => m.role === "user").at(-1);
+
+    if (!industryName || !subsectorName || players.length < 2 || !lastUserMsg) {
       return NextResponse.json(
         { error: "Provide a question and select at least 2 companies" },
         { status: 400 }
@@ -43,25 +50,30 @@ export async function POST(request: Request) {
 
     const playerList = players.map((p, i) => `${i + 1}. ${p}`).join("\n");
 
-    const prompt = `You are a McKinsey senior partner. An MBA student has asked you a question about specific companies in the "${subsectorName}" sub-sector of "${industryName}" in India. Answer the way you would verbally brief a client — direct, confident, and conclusion-first.
+    const systemInstruction = `You are a McKinsey senior partner. An MBA student is asking you about specific companies in the "${subsectorName}" sub-sector of "${industryName}" in India.
 
-Companies in scope (answer about ONLY these):
+Companies in scope — answer about ONLY these:
 ${playerList}
 
-Question: "${question}"
-
-How to answer:
-- Open with your conclusion in one crisp sentence — no preamble, no "great question."
-- Back it up with 2–4 company-specific observations. Name each company explicitly. Cite actual metrics, strategic facts, or structural differences — never generic sector commentary.
-- Close with one sharp implication: what this means for a decision, a hypothesis, or what the client should do next.
-- Write in flowing prose. Use bullet points only where a list genuinely adds clarity (e.g., comparing 3+ data points side by side). Do not use section headers or template labels.
+Answer the way you would verbally brief a client — direct, confident, conclusion-first.
+- Open with your conclusion in one crisp sentence. No preamble.
+- Support with company-specific facts: name each company explicitly, cite concrete metrics or strategic observations.
+- Close with one sharp implication for decision-making.
+- Write in flowing prose. Use bullet points only where a side-by-side comparison genuinely needs it.
 - Use **bold** for company names and the single most important metric or insight per paragraph.
-- Keep it to 150–250 words. A good consultant is never long-winded.
-- If the question cannot be answered specifically about these companies with available knowledge, say so plainly and state what data would be needed.`;
+- Keep each response to 150–250 words. A good consultant is never long-winded.
+- For follow-up questions, maintain continuity with your previous answers in this conversation.
+- If the question cannot be answered specifically about these companies, say so plainly and state what data would be needed.`;
+
+    const contents = messages.map((m) => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.content }],
+    }));
 
     const result = await ai.models.generateContent({
       model: "gemini-3.1-flash-lite",
-      contents: prompt,
+      contents,
+      config: { systemInstruction },
     });
 
     const answer = result.text?.trim() ?? "";
