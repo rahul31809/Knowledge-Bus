@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2Icon, PlusIcon, XIcon } from "lucide-react";
+import { Loader2Icon, PlusIcon, SearchIcon, XIcon } from "lucide-react";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import type { PrimerComparisonResult, PrimerPlayer } from "@/lib/types";
@@ -34,6 +34,11 @@ export function PlayerComparison({
   const [result, setResult] = useState<PrimerComparisonResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [qaQuestion, setQaQuestion] = useState("");
+  const [qaAnswer, setQaAnswer] = useState<string | null>(null);
+  const [qaLoading, setQaLoading] = useState(false);
+  const [qaError, setQaError] = useState<string | null>(null);
 
   if (players.length === 0) return null;
 
@@ -84,6 +89,37 @@ export function PlayerComparison({
     });
     setResult(null);
     setError(null);
+  }
+
+  async function handleAskPlayers(event: FormEvent) {
+    event.preventDefault();
+    const q = qaQuestion.trim();
+    if (!q || qaLoading || selected.size < 2) return;
+    setQaLoading(true);
+    setQaError(null);
+    setQaAnswer(null);
+    try {
+      const res = await fetch("/api/industries/ask-players", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          industryName,
+          subsectorName,
+          players: Array.from(selected),
+          question: q,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error ?? "Failed to get an answer");
+      }
+      const data = (await res.json()) as { answer: string };
+      setQaAnswer(data.answer);
+    } catch (err) {
+      setQaError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setQaLoading(false);
+    }
   }
 
   async function handleCompare() {
@@ -196,6 +232,42 @@ export function PlayerComparison({
         <p className="text-xs text-muted-foreground">Pick 2-3 players to compare on relevant parameters.</p>
         {error ? <p className="text-xs text-destructive">{error}</p> : null}
       </div>
+
+      {selected.size >= 2 ? (
+        <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
+          <div>
+            <p className="text-xs font-semibold text-foreground">
+              Ask about {Array.from(selected).join(" vs ")}
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Ask any question — Gemini answers with respect to only these companies.
+            </p>
+          </div>
+          <form onSubmit={handleAskPlayers} className="flex gap-2">
+            <input
+              value={qaQuestion}
+              onChange={(e) => setQaQuestion(e.target.value)}
+              placeholder="e.g. Which has a stronger competitive moat and why?"
+              disabled={qaLoading}
+              className="flex-1 rounded-md border border-input px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
+            />
+            <button
+              type="submit"
+              disabled={qaLoading || !qaQuestion.trim()}
+              className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+            >
+              {qaLoading ? <Loader2Icon className="size-4 animate-spin" /> : <SearchIcon className="size-4" />}
+              Ask
+            </button>
+          </form>
+          {qaError ? <p className="text-xs text-destructive">{qaError}</p> : null}
+          {qaAnswer ? (
+            <div className="rounded-lg border border-border bg-muted p-3">
+              <Markdown>{qaAnswer}</Markdown>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {result && result.rows.length > 0 ? (
         <div className="flex flex-col gap-3">
