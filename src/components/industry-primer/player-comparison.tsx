@@ -46,6 +46,7 @@ export function PlayerComparison({
   const [financials, setFinancials] = useState<FinancialCompanyResult[] | null>(null);
   const [financialsLoading, setFinancialsLoading] = useState(false);
   const [financialsError, setFinancialsError] = useState<string | null>(null);
+  const [activePanel, setActivePanel] = useState<"compare" | "financials" | null>(null);
 
   const [qaMessages, setQaMessages] = useState<QaMessage[]>([]);
   const [qaInput, setQaInput] = useState("");
@@ -84,6 +85,8 @@ export function PlayerComparison({
     });
     if (willBeEmpty) resetChat();
     setResult(null);
+    setFinancials(null);
+    setActivePanel(null);
     setError(null);
   }
 
@@ -117,6 +120,8 @@ export function PlayerComparison({
     });
     if (willBeEmpty) resetChat();
     setResult(null);
+    setFinancials(null);
+    setActivePanel(null);
     setError(null);
   }
 
@@ -157,7 +162,8 @@ export function PlayerComparison({
   }
 
   async function handleFinancials() {
-    setResult(null); // hide comparison panel
+    setActivePanel("financials");
+    if (financials !== null) return; // already have data — just show it
     setFinancialsLoading(true);
     setFinancialsError(null);
     try {
@@ -184,7 +190,8 @@ export function PlayerComparison({
   }
 
   async function handleCompare() {
-    setFinancials(null); // hide financials panel
+    setActivePanel("compare");
+    if (result !== null) return; // already have data — just show it
     setLoading(true);
     setError(null);
     resetChat();
@@ -359,7 +366,7 @@ export function PlayerComparison({
         {financialsError ? <p className="text-xs text-destructive">{financialsError}</p> : null}
       </div>
 
-      {result && result.rows.length > 0 ? (
+      {activePanel === "compare" && result && result.rows.length > 0 ? (
         <div className="flex flex-col gap-3">
           {result.synthesis ? (
             <div className="rounded-lg border border-border bg-muted p-3">
@@ -395,7 +402,7 @@ export function PlayerComparison({
         </div>
       ) : null}
 
-      {financials ? (
+      {activePanel === "financials" && financials ? (
         <div className="flex flex-col gap-2">
           <p className="text-sm font-semibold text-foreground">Financial Data</p>
           <FinancialComparison companies={financials} />
