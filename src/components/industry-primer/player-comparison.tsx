@@ -75,7 +75,6 @@ export function PlayerComparison({
     });
     setResult(null);
     setError(null);
-    resetChat();
   }
 
   function handleAddCustom(event: FormEvent) {
@@ -106,7 +105,6 @@ export function PlayerComparison({
     });
     setResult(null);
     setError(null);
-    resetChat();
   }
 
   async function handleAskPlayers(event: FormEvent) {
@@ -148,6 +146,7 @@ export function PlayerComparison({
   async function handleCompare() {
     setLoading(true);
     setError(null);
+    resetChat();
     try {
       const chosen = candidates
         .filter((c) => selected.has(c.name))
