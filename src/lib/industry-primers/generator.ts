@@ -267,7 +267,10 @@ Return a single JSON object with exactly this structure. The strings and numbers
 
 Requirements:
 - "historical_trend" needs 4-6 points ending at the most recent year; "comparison" needs exactly 2 points (current vs projected).
-- All numeric "value" fields must be plain numbers (no currency symbols, commas, or units) on a consistent scale matching "trend_unit".
+- "overview.key_stats[].value" MUST be a human-readable formatted string (e.g. "₹6.5L Cr", "11%", "20+") — NEVER a raw integer.
+- "market_size_growth.current_size_label" and "future_outlook.projection_label" MUST include the ₹ symbol and Cr/L Cr units.
+- "market_size_growth.cagr_label" and "future_outlook.projected_cagr_label" MUST include the % sign.
+- All "historical_trend[].value" and "comparison[].value" numeric fields must be plain numbers on a consistent scale matching "trend_unit" (no symbols — those go in the label fields).
 - "value_chain.stages" needs 4-6 stages; "value_capture" must be "high", "medium", or "low".
 - "policy_regulatory.items" needs 4-6 items.
 - "technology_trends.trends" needs 4-6 items; "maturity" must be "emerging", "scaling", or "mainstream".
