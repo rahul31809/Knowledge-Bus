@@ -30,14 +30,14 @@ export function IndustrySidebar() {
           const isOpen = openSlugs.has(industry.slug);
           return (
             <li key={industry.slug}>
-              <details
-                open={isOpen}
-                onToggle={(e) => {
-                  const open = e.currentTarget.open;
-                  setOpenSlugs(open ? new Set([industry.slug]) : new Set());
-                }}
-              >
-                <summary className="cursor-pointer list-none rounded-md px-2 py-1.5 text-sm font-medium text-foreground hover:bg-accent">
+              <details open={isOpen}>
+                <summary
+                  className="cursor-pointer list-none rounded-md px-2 py-1.5 text-sm font-medium text-foreground hover:bg-accent"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setOpenSlugs(isOpen ? new Set() : new Set([industry.slug]));
+                  }}
+                >
                   {industry.name}
                 </summary>
                 <ul className="mt-0.5 mb-1 ml-2 flex flex-col gap-0.5 border-l border-border pl-3">
