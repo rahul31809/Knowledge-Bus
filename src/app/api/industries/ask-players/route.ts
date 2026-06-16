@@ -12,34 +12,38 @@ interface AskPlayersRequestBody {
 }
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  const body = (await request.json()) as AskPlayersRequestBody;
-  const industryName = body.industryName?.trim();
-  const subsectorName = body.subsectorName?.trim();
-  const players = Array.isArray(body.players) ? body.players.filter(Boolean) : [];
-  const question = body.question?.trim();
+    const body = (await request.json()) as AskPlayersRequestBody;
+    const industryName = body.industryName?.trim();
+    const subsectorName = body.subsectorName?.trim();
+    const players = Array.isArray(body.players) ? body.players.filter(Boolean) : [];
+    const question = body.question?.trim();
 
-  if (!industryName || !subsectorName || players.length < 2 || !question) {
-    return NextResponse.json({ error: "Provide a question and select at least 2 companies" }, { status: 400 });
-  }
+    if (!industryName || !subsectorName || players.length < 2 || !question) {
+      return NextResponse.json(
+        { error: "Provide a question and select at least 2 companies" },
+        { status: 400 }
+      );
+    }
 
-  const apiKey = process.env.GOOGLE_AI_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json({ error: "GOOGLE_AI_API_KEY is not configured" }, { status: 500 });
-  }
+    const apiKey = process.env.GOOGLE_AI_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: "GOOGLE_AI_API_KEY is not configured" }, { status: 500 });
+    }
 
-  const ai = new GoogleGenAI({ apiKey });
+    const ai = new GoogleGenAI({ apiKey });
 
-  const playerList = players.map((p, i) => `${i + 1}. ${p}`).join("\n");
+    const playerList = players.map((p, i) => `${i + 1}. ${p}`).join("\n");
 
-  const prompt = `You are an MBB-level management consultant helping an MBA student prepare for strategy consulting interviews (Big 4 / Accenture Strategy, India-focused).
+    const prompt = `You are an MBB-level management consultant helping an MBA student prepare for strategy consulting interviews (Big 4 / Accenture Strategy, India-focused).
 
 The student is analysing the "${subsectorName}" sub-sector of "${industryName}" in India, and has selected these specific companies for deep-dive:
 
@@ -66,21 +70,20 @@ Rules:
 - If the question genuinely cannot be answered specifically about these companies, say so clearly and explain what information is needed.
 - Do not pad with background industry context unless it directly differentiates the companies.`;
 
-  let result;
-  try {
-    result = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+    const result = await ai.models.generateContent({
+      model: "gemini-3.1-flash-lite",
       contents: prompt,
     });
+
+    const answer = result.text?.trim() ?? "";
+    if (!answer) {
+      return NextResponse.json({ error: "No answer returned from Gemini" }, { status: 502 });
+    }
+
+    return NextResponse.json({ answer });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Gemini API error";
-    return NextResponse.json({ error: msg }, { status: 502 });
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[ask-players]", msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
-
-  const answer = result.text?.trim() ?? "";
-  if (!answer) {
-    return NextResponse.json({ error: "No answer returned from Gemini" }, { status: 502 });
-  }
-
-  return NextResponse.json({ answer });
 }
