@@ -3,7 +3,9 @@
 import { Loader2Icon, PlusIcon, SearchIcon, XIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
+import type { FinancialCompanyResult } from "@/app/api/industries/financials/route";
 import type { PrimerComparisonResult, PrimerPlayer } from "@/lib/types";
+import { FinancialComparison } from "./financial-comparison";
 import { Markdown } from "./markdown";
 import { SourceLink } from "./source-link";
 import { TAG_STYLES, originVariant } from "./tagged-card-grid";
@@ -39,6 +41,10 @@ export function PlayerComparison({
   const [result, setResult] = useState<PrimerComparisonResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [financials, setFinancials] = useState<FinancialCompanyResult[] | null>(null);
+  const [financialsLoading, setFinancialsLoading] = useState(false);
+  const [financialsError, setFinancialsError] = useState<string | null>(null);
 
   const [qaMessages, setQaMessages] = useState<QaMessage[]>([]);
   const [qaInput, setQaInput] = useState("");
@@ -145,6 +151,32 @@ export function PlayerComparison({
       setQaError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setQaLoading(false);
+    }
+  }
+
+  async function handleFinancials() {
+    setFinancialsLoading(true);
+    setFinancialsError(null);
+    try {
+      const res = await fetch("/api/industries/financials", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          industryName,
+          subsectorName,
+          players: Array.from(selected),
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error ?? "Failed to fetch financial data");
+      }
+      const data = (await res.json()) as { companies: FinancialCompanyResult[] };
+      setFinancials(data.companies);
+    } catch (err) {
+      setFinancialsError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setFinancialsLoading(false);
     }
   }
 
@@ -263,8 +295,18 @@ export function PlayerComparison({
           {loading ? <Loader2Icon className="size-4 animate-spin" /> : null}
           Compare Selected ({selected.size})
         </button>
-        <p className="text-xs text-muted-foreground">Pick 2-3 players to compare on relevant parameters.</p>
+        <button
+          type="button"
+          onClick={handleFinancials}
+          disabled={selected.size < 1 || financialsLoading}
+          className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground disabled:opacity-50"
+        >
+          {financialsLoading ? <Loader2Icon className="size-4 animate-spin" /> : null}
+          Financial Data
+        </button>
+        <p className="text-xs text-muted-foreground">Compare requires 2–3 · Financial Data works with 1+.</p>
         {error ? <p className="text-xs text-destructive">{error}</p> : null}
+        {financialsError ? <p className="text-xs text-destructive">{financialsError}</p> : null}
       </div>
 
       {result && result.rows.length > 0 ? (
@@ -300,6 +342,13 @@ export function PlayerComparison({
               </tbody>
             </table>
           </div>
+        </div>
+      ) : null}
+
+      {financials ? (
+        <div className="flex flex-col gap-2">
+          <p className="text-sm font-semibold text-foreground">Financial Data</p>
+          <FinancialComparison companies={financials} />
         </div>
       ) : null}
 
