@@ -87,9 +87,7 @@ export function PlayerComparison({
     setQaImage(null);
   }
 
-  function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  function loadImageFile(file: File) {
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result as string;
@@ -100,7 +98,23 @@ export function PlayerComparison({
       setQaImage({ base64, mimeType, previewUrl: dataUrl });
     };
     reader.readAsDataURL(file);
+  }
+
+  function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    loadImageFile(file);
     e.target.value = "";
+  }
+
+  function handlePaste(e: React.ClipboardEvent<HTMLInputElement>) {
+    const imageItem = Array.from(e.clipboardData.items).find((item) =>
+      item.type.startsWith("image/")
+    );
+    if (!imageItem) return;
+    e.preventDefault();
+    const file = imageItem.getAsFile();
+    if (file) loadImageFile(file);
   }
 
   function toggle(name: string) {
@@ -574,12 +588,13 @@ export function PlayerComparison({
               <input
                 value={qaInput}
                 onChange={(e) => setQaInput(e.target.value)}
+                onPaste={handlePaste}
                 placeholder={
                   selected.size < 1
                     ? "Select a company to ask…"
                     : qaMessages.length === 0
-                    ? "e.g. Which has a stronger competitive moat and why?"
-                    : "Ask a follow-up…"
+                    ? "e.g. Which has a stronger competitive moat and why? (or paste a screenshot)"
+                    : "Ask a follow-up… (or paste a screenshot)"
                 }
                 disabled={qaLoading || selected.size < 1}
                 className="flex-1 rounded-md border border-input px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
