@@ -1,9 +1,10 @@
 "use client";
 
-import { ImageIcon, Loader2Icon, PlusIcon, SearchIcon, XIcon } from "lucide-react";
+import { ChevronRightIcon, ExternalLinkIcon, ImageIcon, Loader2Icon, NewspaperIcon, PlusIcon, SearchIcon, XIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import type { FinancialCompanyResult } from "@/app/api/industries/financials/route";
+import type { CompanyNewsResult } from "@/app/api/industries/company-news/route";
 import type { PrimerComparisonResult, PrimerPlayer } from "@/lib/types";
 import { FinancialComparison } from "./financial-comparison";
 import { Markdown } from "./markdown";
@@ -47,7 +48,10 @@ export function PlayerComparison({
   const [financials, setFinancials] = useState<FinancialCompanyResult[] | null>(null);
   const [financialsLoading, setFinancialsLoading] = useState(false);
   const [financialsError, setFinancialsError] = useState<string | null>(null);
-  const [activePanel, setActivePanel] = useState<"compare" | "financials" | null>(null);
+  const [news, setNews] = useState<CompanyNewsResult[] | null>(null);
+  const [newsLoading, setNewsLoading] = useState(false);
+  const [newsError, setNewsError] = useState<string | null>(null);
+  const [activePanel, setActivePanel] = useState<"compare" | "financials" | "news" | null>(null);
 
   const [qaMessages, setQaMessages] = useState<QaMessage[]>([]);
   const [qaInput, setQaInput] = useState("");
@@ -132,13 +136,16 @@ export function PlayerComparison({
     if (willBeEmpty) {
       resetChat();
       setFinancials(null);
+      setNews(null);
       setActivePanel(null);
     } else if (isDeselecting) {
-      // Remove only this company from the cached financials; keep panel open
+      // Remove only this company from cached data; keep panel open
       setFinancials((prev) => prev ? prev.filter((c) => c.name !== name) : null);
+      setNews((prev) => prev ? prev.filter((c) => c.company !== name) : null);
     } else {
       // Adding a new company — clear so re-fetch includes it
       setFinancials(null);
+      setNews(null);
     }
     setResult(null);
     setError(null);
@@ -175,9 +182,11 @@ export function PlayerComparison({
     if (willBeEmpty) {
       resetChat();
       setFinancials(null);
+      setNews(null);
       setActivePanel(null);
     } else {
       setFinancials((prev) => prev ? prev.filter((c) => c.name !== name) : null);
+      setNews((prev) => prev ? prev.filter((c) => c.company !== name) : null);
     }
     setResult(null);
     setError(null);
@@ -253,6 +262,34 @@ export function PlayerComparison({
       setFinancialsError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setFinancialsLoading(false);
+    }
+  }
+
+  async function handleNews() {
+    setActivePanel("news");
+    if (news !== null) return;
+    setNewsLoading(true);
+    setNewsError(null);
+    try {
+      const res = await fetch("/api/industries/company-news", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          companies: Array.from(selected),
+          industryName,
+          subsectorName,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error ?? "Failed to fetch news");
+      }
+      const data = (await res.json()) as { companies: CompanyNewsResult[] };
+      setNews(data.companies);
+    } catch (err) {
+      setNewsError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setNewsLoading(false);
     }
   }
 
@@ -441,10 +478,25 @@ export function PlayerComparison({
             {financialsLoading ? <Loader2Icon className="size-4 animate-spin" /> : null}
             Financials Comparison
           </button>
+
+          <button
+            type="button"
+            onClick={handleNews}
+            disabled={selected.size < 1 || newsLoading}
+            className={`inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
+              activePanel === "news"
+                ? "bg-primary text-primary-foreground"
+                : "border border-border bg-card text-foreground hover:bg-accent"
+            }`}
+          >
+            {newsLoading ? <Loader2Icon className="size-4 animate-spin" /> : <NewspaperIcon className="size-4" />}
+            Latest News
+          </button>
         </div>
-        <p className="text-xs italic text-muted-foreground">Compare Players requires 2–3 · Financials Comparison works with 1+.</p>
+        <p className="text-xs italic text-muted-foreground">Compare Players requires 2–3 · Financials &amp; News work with 1+.</p>
         {error ? <p className="text-xs text-destructive">{error}</p> : null}
         {financialsError ? <p className="text-xs text-destructive">{financialsError}</p> : null}
+        {newsError ? <p className="text-xs text-destructive">{newsError}</p> : null}
       </div>
 
       {activePanel === "compare" && result && result.rows.length > 0 ? (
@@ -492,6 +544,60 @@ export function PlayerComparison({
         <div className="flex flex-col gap-2">
           <p className="text-sm font-semibold text-foreground">Financials Comparison</p>
           <FinancialComparison companies={financials} />
+        </div>
+      ) : null}
+
+      {activePanel === "news" ? (
+        <div className="flex flex-col gap-4">
+          {newsLoading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2Icon className="size-4 animate-spin" />
+              Fetching latest news…
+            </div>
+          ) : news && news.length > 0 ? (
+            <>
+              {news.map((companyNews) => (
+                <div key={companyNews.company} className="flex flex-col gap-2">
+                  {news.length > 1 ? (
+                    <p className="text-sm font-semibold text-foreground">{companyNews.company}</p>
+                  ) : null}
+                  {companyNews.error ? (
+                    <p className="text-xs text-destructive">{companyNews.error}</p>
+                  ) : companyNews.items.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No recent news found.</p>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      {companyNews.items.map((item, i) => (
+                        <details key={i} className="group rounded-lg border border-border bg-card">
+                          <summary className="flex cursor-pointer list-none items-start gap-2.5 px-3 py-2.5 [&::-webkit-details-marker]:hidden">
+                            <ChevronRightIcon className="mt-0.5 size-3.5 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-foreground leading-snug">{item.title}</p>
+                              <p className="mt-0.5 text-xs text-muted-foreground">{item.source}{item.date ? ` · ${item.date}` : ""}</p>
+                            </div>
+                          </summary>
+                          <div className="border-t border-border px-4 py-3">
+                            <p className="text-sm text-muted-foreground leading-relaxed">{item.summary}</p>
+                            {item.url && item.url.startsWith("http") ? (
+                              <a
+                                href={item.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                              >
+                                Read full article <ExternalLinkIcon className="size-3" />
+                              </a>
+                            ) : null}
+                          </div>
+                        </details>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+              <p className="text-xs text-muted-foreground">AI-generated summaries via web search · verify before citing.</p>
+            </>
+          ) : null}
         </div>
       ) : null}
 
