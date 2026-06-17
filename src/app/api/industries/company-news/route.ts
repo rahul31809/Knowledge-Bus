@@ -64,7 +64,7 @@ Return ONLY a valid JSON array — no markdown fences, no commentary, no extra t
 Prioritise: earnings, deals/acquisitions, regulatory actions, leadership changes, capacity expansions, market share shifts. Skip press releases and promotional content.`;
 
           const result = await ai.models.generateContent({
-            model: "gemini-2.0-flash",
+            model: "gemini-1.5-flash",
             contents: [{ role: "user", parts: [{ text: prompt }] }],
             config: {
               tools: [{ googleSearch: {} }],
@@ -77,10 +77,14 @@ Prioritise: earnings, deals/acquisitions, regulatory actions, leadership changes
           const items = JSON.parse(jsonMatch[0]) as NewsItem[];
           return { company, items: items.slice(0, 5) };
         } catch (err) {
+          const raw = err instanceof Error ? err.message : String(err);
+          const isQuota = raw.includes("RESOURCE_EXHAUSTED") || raw.includes("quota");
           return {
             company,
             items: [],
-            error: err instanceof Error ? err.message : "Failed to fetch news",
+            error: isQuota
+              ? "API quota exceeded — try again in a few minutes."
+              : "Failed to fetch news. Please try again.",
           };
         }
       })
