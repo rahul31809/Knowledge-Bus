@@ -61,9 +61,19 @@ export default async function IndustryPrimerPage({
         ]}
       />
 
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">{subsector.name}</h1>
-        <p className="text-sm text-muted-foreground">{industry.name}</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">{subsector.name}</h1>
+          <p className="text-sm text-muted-foreground">{industry.name}</p>
+        </div>
+        {primer ? (
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <ResetPrimerButton industrySlug={industrySlug} subsectorSlug={subsectorSlug} />
+            <p className="text-xs text-muted-foreground">
+              Generated {new Date(primer.generated_at).toLocaleDateString()}
+            </p>
+          </div>
+        ) : null}
       </div>
 
       {generationError ? (
@@ -260,12 +270,9 @@ export default async function IndustryPrimerPage({
             subsectorName={subsector.name}
           />
 
-          <div className="flex items-center justify-between gap-4">
-            <p className="text-xs text-muted-foreground">
-              Generated {new Date(primer.generated_at).toLocaleDateString()} — AI-generated, verify key figures.
-            </p>
-            <ResetPrimerButton industrySlug={industrySlug} subsectorSlug={subsectorSlug} />
-          </div>
+          <p className="text-xs text-muted-foreground">
+            AI-generated — verify key figures before use in presentations.
+          </p>
         </div>
       ) : null}
     </div>

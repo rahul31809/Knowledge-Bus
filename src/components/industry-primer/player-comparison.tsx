@@ -295,36 +295,29 @@ export function PlayerComparison({
           );
         })}
 
-        {/* Any Other Company card */}
+        {/* Any Other Company card — always enabled */}
         {selected.size < 3 ? (() => {
-          const disabled = selected.size === 0;
           const hint =
             selected.size === 0
-              ? "Select at least 2 companies above before adding a custom one"
+              ? "Enter any company name to look up financials or add to comparison"
               : selected.size === 1
-              ? "You have 1 company selected — select 1 more above, or enter a custom company here to complete the comparison"
+              ? "Enter a custom company to complete the 2-player comparison"
               : "Optionally add a 3rd company to broaden the comparison";
 
           return (
             <div
-              role={disabled ? undefined : "button"}
-              tabIndex={disabled ? undefined : 0}
+              role="button"
+              tabIndex={0}
               className={`flex items-start gap-3 rounded-lg border p-3 transition-colors ${
-                disabled
-                  ? "cursor-not-allowed border-border bg-card opacity-50"
-                  : isAddingCustom
+                isAddingCustom
                   ? "border-primary/40 bg-accent"
                   : "cursor-pointer border-border bg-card hover:border-primary/40 hover:bg-accent/10"
               }`}
-              onClick={() => { if (!disabled && !isAddingCustom) setIsAddingCustom(true); }}
-              onKeyDown={(e) => { if (e.key === "Enter" && !disabled && !isAddingCustom) setIsAddingCustom(true); }}
+              onClick={() => { if (!isAddingCustom) setIsAddingCustom(true); }}
+              onKeyDown={(e) => { if (e.key === "Enter" && !isAddingCustom) setIsAddingCustom(true); }}
             >
-              {!disabled && isAddingCustom ? (
-                <form
-                  onSubmit={handleAddCustom}
-                  className="flex w-full items-center gap-2"
-                  onClick={(e) => e.stopPropagation()}
-                >
+              {isAddingCustom ? (
+                <form onSubmit={handleAddCustom} className="flex w-full items-center gap-2" onClick={(e) => e.stopPropagation()}>
                   <PlusIcon className="mt-1 size-4 shrink-0 text-muted-foreground" />
                   <input
                     autoFocus
