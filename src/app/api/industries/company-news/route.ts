@@ -102,11 +102,17 @@ export async function POST(request: Request) {
             )
             .join("\n\n");
 
-          const prompt = `You are a financial analyst. Here are recent news articles about ${company}${subsectorName ? ` (${subsectorName} sector)` : ""}:
+          const prompt = `You are a senior equity analyst at a top-tier investment bank. Here are recent news articles about ${company}${subsectorName ? ` (${subsectorName} sector)` : ""}:
 
 ${articleList}
 
-For each article, write exactly 2 sentences: what happened and why it matters for investors or industry observers. Base your summary only on the title and snippet — do not invent facts.
+For each article, write a detailed analytical summary of 4-6 sentences covering:
+- What exactly happened (the specific event, numbers, names where available)
+- The immediate business or financial impact
+- Why this matters strategically for the company
+- The broader industry or market implication
+
+Base your summary only on the title and snippet provided — do not invent specific figures not mentioned. Write in clear, direct prose — no bullet points, no headers.
 
 Return ONLY a JSON array, no markdown fences, no extra text:
 [{"index":1,"summary":"..."},{"index":2,"summary":"..."}]`;
