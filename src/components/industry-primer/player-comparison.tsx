@@ -564,7 +564,7 @@ export function PlayerComparison({
                   {companyNews.error ? (
                     <p className="text-xs text-destructive">{companyNews.error}</p>
                   ) : companyNews.items.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">No recent news found.</p>
+                    <p className="text-xs text-muted-foreground">No significant news in the last 90 days.</p>
                   ) : (
                     <div className="flex flex-col gap-2">
                       {companyNews.items.map((item, i) => (

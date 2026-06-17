@@ -45,7 +45,7 @@ function parseRss(xml: string) {
     const snippet = extractTag(block, "description").replace(/<[^>]+>/g, "").slice(0, 300).trim();
     if (title) items.push({ title, link, pubDate, snippet, source });
   }
-  return items.slice(0, 5);
+  return items.slice(0, 15);
 }
 
 function formatPubDate(raw: string): string {
@@ -94,28 +94,29 @@ export async function POST(request: Request) {
             return { company, items: [], error: "No recent news found." };
           }
 
-          // Single Gemini call to summarize all articles
+          const today = new Date().toISOString().slice(0, 10);
+          const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
           const articleList = rssItems
             .map(
               (item, i) =>
-                `${i + 1}. Title: "${item.title}"\n   Snippet: "${item.snippet}"\n   Source: ${item.source}`
+                `[${i + 1}] Title: "${item.title}" | Source: ${item.source || "Unknown"} | Date: ${item.pubDate} | Snippet: "${item.snippet}"`
             )
-            .join("\n\n");
+            .join("\n");
 
-          const prompt = `You are a senior equity analyst at a top-tier investment bank. Here are recent news articles about ${company}${subsectorName ? ` (${subsectorName} sector)` : ""}:
+          const prompt = `You are a senior equity analyst. Below are ${rssItems.length} raw news items about ${company}${subsectorName ? ` (${subsectorName} sector)` : ""} fetched from Google News. Today is ${today}.
 
 ${articleList}
 
-For each article, write a detailed analytical summary of 4-6 sentences covering:
-- What exactly happened (the specific event, numbers, names where available)
-- The immediate business or financial impact
-- Why this matters strategically for the company
-- The broader industry or market implication
+Instructions:
+1. EXCLUDE any article published before ${cutoff} (older than 90 days). If all articles are older than 90 days, return an empty array [].
+2. GROUP articles that cover the same underlying event or story (same deal, same result, same announcement).
+3. From each group, SELECT the one from the most credible source. Credibility order (high to low): Reuters, Bloomberg, Financial Times, Economic Times, Mint, Business Standard, Hindu BusinessLine, Livemint, MoneyControl, then others.
+4. After deduplication, keep at most 5 unique stories. Prioritise significance — earnings, deals, regulatory actions, leadership changes, capacity expansions over routine updates.
+5. For each selected article, write a detailed 4-6 sentence analytical summary covering: what exactly happened, immediate business/financial impact, strategic significance for the company, broader industry implication. Do not invent facts not in the title/snippet.
 
-Base your summary only on the title and snippet provided — do not invent specific figures not mentioned. Write in clear, direct prose — no bullet points, no headers.
-
-Return ONLY a JSON array, no markdown fences, no extra text:
-[{"index":1,"summary":"..."},{"index":2,"summary":"..."}]`;
+Return ONLY a JSON array (no markdown, no extra text). Use the original article index for "index":
+[{"index":1,"title":"...","source":"...","date":"...","summary":"..."}]`;
 
           const result = await ai.models.generateContent({
             model: "gemini-3.1-flash-lite",
@@ -124,16 +125,19 @@ Return ONLY a JSON array, no markdown fences, no extra text:
 
           const text = result.text?.trim() ?? "";
           const jsonMatch = text.match(/\[[\s\S]*\]/);
-          const summaries: { index: number; summary: string }[] = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
-          const summaryMap = Object.fromEntries(summaries.map((s) => [s.index, s.summary]));
+          const selected: { index: number; title: string; source: string; date: string; summary: string }[] =
+            jsonMatch ? JSON.parse(jsonMatch[0]) : [];
 
-          const items: NewsItem[] = rssItems.map((item, i) => ({
-            title: item.title,
-            summary: summaryMap[i + 1] ?? item.snippet,
-            source: item.source || "News",
-            date: formatPubDate(item.pubDate),
-            url: item.link,
-          }));
+          const items: NewsItem[] = selected.map((s) => {
+            const original = rssItems[s.index - 1];
+            return {
+              title: s.title || original?.title || "",
+              summary: s.summary,
+              source: s.source || original?.source || "News",
+              date: s.date ? formatPubDate(s.date) : formatPubDate(original?.pubDate ?? ""),
+              url: original?.link ?? "",
+            };
+          });
 
           return { company, items };
         } catch (err) {
