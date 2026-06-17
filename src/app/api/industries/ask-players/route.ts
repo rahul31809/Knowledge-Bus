@@ -34,9 +34,9 @@ export async function POST(request: Request) {
 
     const lastUserMsg = messages.filter((m) => m.role === "user").at(-1);
 
-    if (!industryName || !subsectorName || players.length < 2 || !lastUserMsg) {
+    if (!industryName || !subsectorName || players.length < 1 || !lastUserMsg) {
       return NextResponse.json(
-        { error: "Provide a question and select at least 2 companies" },
+        { error: "Select at least one company and provide a question" },
         { status: 400 }
       );
     }
@@ -50,12 +50,13 @@ export async function POST(request: Request) {
 
     const playerList = players.map((p, i) => `${i + 1}. ${p}`).join("\n");
 
+    const companyLabel = players.length === 1 ? "company" : "companies";
     const systemInstruction = `You are a McKinsey senior partner advising an MBA student on the "${subsectorName}" sub-sector of "${industryName}" in India.
 
-The primary companies under discussion are:
+The ${companyLabel} under discussion ${players.length === 1 ? "is" : "are"}:
 ${playerList}
 
-Default behaviour: anchor your answers to these companies. When questions are about them, be specific — names, metrics, strategic facts.
+Default behaviour: anchor your answers to ${players.length === 1 ? "this company" : "these companies"}. When questions are about ${players.length === 1 ? "it" : "them"}, be specific — names, metrics, strategic facts.
 
 Exception: if the student explicitly asks about other companies, a broader market, or anything outside this set, answer it fully and directly as a senior consultant would. Do not refuse or redirect — treat it as a natural extension of the strategic dialogue. You are not bound by any scope restriction when the student is clearly asking for something broader.
 
