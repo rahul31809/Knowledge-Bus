@@ -24,6 +24,38 @@ interface CompanyNewsRequestBody {
   subsectorName?: string;
 }
 
+function extractTag(block: string, tag: string): string {
+  const cdata = block.match(new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/${tag}>`));
+  if (cdata) return cdata[1].trim();
+  const plain = block.match(new RegExp(`<${tag}[^>]*>([^<]*)<\\/${tag}>`));
+  return (plain?.[1] ?? "").trim();
+}
+
+function parseRss(xml: string) {
+  const items: Array<{ title: string; link: string; pubDate: string; snippet: string; source: string }> = [];
+  const blocks = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].map((m) => m[1]);
+  for (const block of blocks) {
+    const rawTitle = extractTag(block, "title");
+    // Google News titles often end with " - Source Name"
+    const dashIdx = rawTitle.lastIndexOf(" - ");
+    const title = dashIdx > 0 ? rawTitle.slice(0, dashIdx).trim() : rawTitle;
+    const source = dashIdx > 0 ? rawTitle.slice(dashIdx + 3).trim() : extractTag(block, "source");
+    const link = extractTag(block, "link") || extractTag(block, "guid");
+    const pubDate = extractTag(block, "pubDate");
+    const snippet = extractTag(block, "description").replace(/<[^>]+>/g, "").slice(0, 300).trim();
+    if (title) items.push({ title, link, pubDate, snippet, source });
+  }
+  return items.slice(0, 5);
+}
+
+function formatPubDate(raw: string): string {
+  try {
+    return new Date(raw).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  } catch {
+    return raw;
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
@@ -48,44 +80,59 @@ export async function POST(request: Request) {
     const results = await Promise.all(
       companies.map(async (company): Promise<CompanyNewsResult> => {
         try {
-          const prompt = `Find the 4-5 most important news articles about ${company}${subsectorName ? ` in the ${subsectorName} sector` : ""} published in the past 90 days.
+          // Fetch real-time news from Google News RSS
+          const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(company + " India")}&hl=en-IN&gl=IN&ceid=IN:en`;
+          const rssRes = await fetch(rssUrl, {
+            headers: { "User-Agent": "Mozilla/5.0" },
+            signal: AbortSignal.timeout(10000),
+          });
+          if (!rssRes.ok) throw new Error(`RSS fetch failed: ${rssRes.status}`);
+          const xml = await rssRes.text();
+          const rssItems = parseRss(xml);
 
-Return ONLY a valid JSON array — no markdown fences, no commentary, no extra text:
-[
-  {
-    "title": "Exact or near-exact article headline",
-    "summary": "2 sentences: what happened and why it matters for investors or industry observers",
-    "source": "Publication name (e.g. Economic Times, Mint, Reuters, Business Standard)",
-    "date": "e.g. Jun 10, 2025",
-    "url": "Direct URL to the article"
-  }
-]
+          if (rssItems.length === 0) {
+            return { company, items: [], error: "No recent news found." };
+          }
 
-Prioritise: earnings, deals/acquisitions, regulatory actions, leadership changes, capacity expansions, market share shifts. Skip press releases and promotional content.`;
+          // Single Gemini call to summarize all articles
+          const articleList = rssItems
+            .map(
+              (item, i) =>
+                `${i + 1}. Title: "${item.title}"\n   Snippet: "${item.snippet}"\n   Source: ${item.source}`
+            )
+            .join("\n\n");
+
+          const prompt = `You are a financial analyst. Here are recent news articles about ${company}${subsectorName ? ` (${subsectorName} sector)` : ""}:
+
+${articleList}
+
+For each article, write exactly 2 sentences: what happened and why it matters for investors or industry observers. Base your summary only on the title and snippet — do not invent facts.
+
+Return ONLY a JSON array, no markdown fences, no extra text:
+[{"index":1,"summary":"..."},{"index":2,"summary":"..."}]`;
 
           const result = await ai.models.generateContent({
-            model: "gemini-1.5-flash",
+            model: "gemini-3.1-flash-lite",
             contents: [{ role: "user", parts: [{ text: prompt }] }],
-            config: {
-              tools: [{ googleSearch: {} }],
-            },
           });
 
           const text = result.text?.trim() ?? "";
           const jsonMatch = text.match(/\[[\s\S]*\]/);
-          if (!jsonMatch) throw new Error("No JSON array found in response");
-          const items = JSON.parse(jsonMatch[0]) as NewsItem[];
-          return { company, items: items.slice(0, 5) };
+          const summaries: { index: number; summary: string }[] = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
+          const summaryMap = Object.fromEntries(summaries.map((s) => [s.index, s.summary]));
+
+          const items: NewsItem[] = rssItems.map((item, i) => ({
+            title: item.title,
+            summary: summaryMap[i + 1] ?? item.snippet,
+            source: item.source || "News",
+            date: formatPubDate(item.pubDate),
+            url: item.link,
+          }));
+
+          return { company, items };
         } catch (err) {
-          const raw = err instanceof Error ? err.message : String(err);
-          const isQuota = raw.includes("RESOURCE_EXHAUSTED") || raw.includes("quota");
-          return {
-            company,
-            items: [],
-            error: isQuota
-              ? "API quota exceeded — try again in a few minutes."
-              : "Failed to fetch news. Please try again.",
-          };
+          console.error(`[company-news] ${company}:`, err);
+          return { company, items: [], error: "Failed to fetch news. Please try again." };
         }
       })
     );
