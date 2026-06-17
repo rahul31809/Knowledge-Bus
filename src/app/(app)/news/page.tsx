@@ -15,13 +15,13 @@ export default async function NewsPage() {
         </p>
       </div>
 
-      <NewsLibrary categories={categories} />
-
       {categories.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground">
-          No articles yet. Click &quot;Refresh news&quot; above to run the first scan.
+          No articles yet. Click &quot;Refresh&quot; to run the first scan.
         </div>
-      ) : null}
+      ) : (
+        <NewsLibrary categories={categories} />
+      )}
     </div>
   );
 }
