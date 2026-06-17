@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2Icon, PlusIcon, SearchIcon, XIcon } from "lucide-react";
+import { ImageIcon, Loader2Icon, PlusIcon, SearchIcon, XIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import type { FinancialCompanyResult } from "@/app/api/industries/financials/route";
@@ -20,6 +20,7 @@ interface Candidate {
 interface QaMessage {
   role: "user" | "assistant";
   content: string;
+  imageUrl?: string; // data URL, only for display in the chat bubble
 }
 
 export function PlayerComparison({
@@ -52,7 +53,9 @@ export function PlayerComparison({
   const [qaInput, setQaInput] = useState("");
   const [qaLoading, setQaLoading] = useState(false);
   const [qaError, setQaError] = useState<string | null>(null);
+  const [qaImage, setQaImage] = useState<{ base64: string; mimeType: string; previewUrl: string } | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const [qaSubtitle] = useState(() => {
     const lines = [
@@ -81,6 +84,23 @@ export function PlayerComparison({
     setQaMessages([]);
     setQaInput("");
     setQaError(null);
+    setQaImage(null);
+  }
+
+  function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const commaIdx = dataUrl.indexOf(",");
+      const base64 = dataUrl.slice(commaIdx + 1);
+      const mimeMatch = dataUrl.slice(0, commaIdx).match(/:(.*?);/);
+      const mimeType = mimeMatch ? mimeMatch[1] : "image/png";
+      setQaImage({ base64, mimeType, previewUrl: dataUrl });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
   }
 
   function toggle(name: string) {
@@ -152,12 +172,18 @@ export function PlayerComparison({
   async function handleAskPlayers(event: FormEvent) {
     event.preventDefault();
     const q = qaInput.trim();
-    if (!q || qaLoading || selected.size < 1) return;
+    if ((!q && !qaImage) || qaLoading || selected.size < 1) return;
 
-    const userMsg: QaMessage = { role: "user", content: q };
+    const currentImage = qaImage;
+    const userMsg: QaMessage = {
+      role: "user",
+      content: q || "(image)",
+      imageUrl: currentImage?.previewUrl,
+    };
     const nextMessages = [...qaMessages, userMsg];
     setQaMessages(nextMessages);
     setQaInput("");
+    setQaImage(null);
     setQaLoading(true);
     setQaError(null);
 
@@ -169,7 +195,10 @@ export function PlayerComparison({
           industryName,
           subsectorName,
           players: Array.from(selected),
-          messages: nextMessages,
+          // Strip imageUrl from history — only send base64 for the current message
+          messages: nextMessages.map(({ role, content }) => ({ role, content })),
+          imageBase64: currentImage?.base64,
+          imageMimeType: currentImage?.mimeType,
         }),
       });
       if (!res.ok) {
@@ -488,7 +517,16 @@ export function PlayerComparison({
                         : "border border-border bg-card text-foreground"
                     }`}
                   >
-                    {msg.role === "assistant" ? <Markdown>{msg.content}</Markdown> : msg.content}
+                    {msg.role === "assistant" ? (
+                      <Markdown>{msg.content}</Markdown>
+                    ) : (
+                      <>
+                        {msg.imageUrl ? (
+                          <img src={msg.imageUrl} alt="Screenshot" className="mb-1.5 max-h-40 rounded object-contain" />
+                        ) : null}
+                        {msg.content !== "(image)" ? <span>{msg.content}</span> : null}
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
@@ -503,28 +541,58 @@ export function PlayerComparison({
             </div>
           ) : null}
 
-          <form onSubmit={handleAskPlayers} className="flex gap-2">
-            <input
-              value={qaInput}
-              onChange={(e) => setQaInput(e.target.value)}
-              placeholder={
-                selected.size < 1
-                  ? "Select a company to ask…"
-                  : qaMessages.length === 0
-                  ? "e.g. Which has a stronger competitive moat and why?"
-                  : "Ask a follow-up…"
-              }
-              disabled={qaLoading || selected.size < 1}
-              className="flex-1 rounded-md border border-input px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
-            />
-            <button
-              type="submit"
-              disabled={qaLoading || !qaInput.trim() || selected.size < 1}
-              className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
-            >
-              {qaLoading ? <Loader2Icon className="size-4 animate-spin" /> : <SearchIcon className="size-4" />}
-              Ask
-            </button>
+          <form onSubmit={handleAskPlayers} className="flex flex-col gap-2">
+            {qaImage ? (
+              <div className="relative w-fit">
+                <img src={qaImage.previewUrl} alt="Attachment preview" className="h-20 rounded-md border border-border object-contain" />
+                <button
+                  type="button"
+                  onClick={() => setQaImage(null)}
+                  className="absolute -right-1.5 -top-1.5 rounded-full border border-border bg-card p-0.5 text-muted-foreground hover:text-foreground"
+                >
+                  <XIcon className="size-3" />
+                </button>
+              </div>
+            ) : null}
+            <div className="flex gap-2">
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageSelect}
+              />
+              <button
+                type="button"
+                onClick={() => imageInputRef.current?.click()}
+                disabled={qaLoading || selected.size < 1}
+                title="Attach screenshot"
+                className="inline-flex items-center justify-center rounded-md border border-input px-2.5 py-2 text-muted-foreground hover:text-foreground disabled:opacity-60"
+              >
+                <ImageIcon className="size-4" />
+              </button>
+              <input
+                value={qaInput}
+                onChange={(e) => setQaInput(e.target.value)}
+                placeholder={
+                  selected.size < 1
+                    ? "Select a company to ask…"
+                    : qaMessages.length === 0
+                    ? "e.g. Which has a stronger competitive moat and why?"
+                    : "Ask a follow-up…"
+                }
+                disabled={qaLoading || selected.size < 1}
+                className="flex-1 rounded-md border border-input px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
+              />
+              <button
+                type="submit"
+                disabled={qaLoading || (!qaInput.trim() && !qaImage) || selected.size < 1}
+                className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+              >
+                {qaLoading ? <Loader2Icon className="size-4 animate-spin" /> : <SearchIcon className="size-4" />}
+                Ask
+              </button>
+            </div>
           </form>
           {qaError ? <p className="text-xs text-destructive">{qaError}</p> : null}
         </div>

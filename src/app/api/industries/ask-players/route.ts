@@ -14,6 +14,8 @@ interface AskPlayersRequestBody {
   subsectorName?: string;
   players?: string[];
   messages?: QaMessage[];
+  imageBase64?: string;
+  imageMimeType?: string;
 }
 
 export async function POST(request: Request) {
@@ -69,10 +71,19 @@ Answer style for all responses:
 - Keep responses to 150–250 words. A good consultant is never long-winded.
 - Maintain continuity with prior answers in this conversation.`;
 
-    const contents = messages.map((m) => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }],
-    }));
+    const imageBase64 = typeof body.imageBase64 === "string" && body.imageBase64 ? body.imageBase64 : null;
+    const imageMimeType = typeof body.imageMimeType === "string" && body.imageMimeType ? body.imageMimeType : "image/png";
+
+    const contents = messages.map((m, i) => {
+      const isLastUser = m.role === "user" && i === messages.length - 1;
+      const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [
+        { text: m.content },
+      ];
+      if (isLastUser && imageBase64) {
+        parts.push({ inlineData: { mimeType: imageMimeType, data: imageBase64 } });
+      }
+      return { role: m.role === "assistant" ? "model" : "user", parts };
+    });
 
     const result = await ai.models.generateContent({
       model: "gemini-3.1-flash-lite",
