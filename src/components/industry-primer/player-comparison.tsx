@@ -51,6 +51,7 @@ export function PlayerComparison({
   const [news, setNews] = useState<CompanyNewsResult[] | null>(null);
   const [newsLoading, setNewsLoading] = useState(false);
   const [newsError, setNewsError] = useState<string | null>(null);
+  const [expandedNews, setExpandedNews] = useState<Record<string, number>>({});
   const [activePanel, setActivePanel] = useState<"compare" | "financials" | "news" | null>(null);
 
   const [qaMessages, setQaMessages] = useState<QaMessage[]>([]);
@@ -567,30 +568,46 @@ export function PlayerComparison({
                     <p className="text-xs text-muted-foreground">No significant news in the last 90 days.</p>
                   ) : (
                     <div className="flex flex-col gap-2">
-                      {companyNews.items.map((item, i) => (
-                        <details key={i} className="group rounded-lg border border-border bg-card">
-                          <summary className="flex cursor-pointer list-none items-start gap-2.5 px-3 py-2.5 [&::-webkit-details-marker]:hidden">
-                            <ChevronRightIcon className="mt-0.5 size-3.5 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-foreground leading-snug">{item.title}</p>
-                              <p className="mt-0.5 text-xs text-muted-foreground">{item.source}{item.date ? ` · ${item.date}` : ""}</p>
-                            </div>
-                          </summary>
-                          <div className="border-t border-border px-4 py-3">
-                            <p className="text-sm text-muted-foreground leading-relaxed">{item.summary}</p>
-                            {item.url && item.url.startsWith("http") ? (
-                              <a
-                                href={item.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
-                              >
-                                Read full article <ExternalLinkIcon className="size-3" />
-                              </a>
+                      {companyNews.items.map((item, i) => {
+                        const isOpen = expandedNews[companyNews.company] === i;
+                        return (
+                          <div key={i} className="rounded-lg border border-border bg-card">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedNews((prev) => ({
+                                  ...prev,
+                                  [companyNews.company]: prev[companyNews.company] === i ? -1 : i,
+                                }))
+                              }
+                              className="flex w-full items-start gap-2.5 px-3 py-2.5 text-left"
+                            >
+                              <ChevronRightIcon
+                                className={`mt-0.5 size-3.5 shrink-0 text-muted-foreground transition-transform ${isOpen ? "rotate-90" : ""}`}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-foreground leading-snug">{item.title}</p>
+                                <p className="mt-0.5 text-xs text-muted-foreground">{item.source}{item.date ? ` · ${item.date}` : ""}</p>
+                              </div>
+                            </button>
+                            {isOpen ? (
+                              <div className="border-t border-border px-4 py-3">
+                                <p className="text-sm text-muted-foreground leading-relaxed">{item.summary}</p>
+                                {item.url && item.url.startsWith("http") ? (
+                                  <a
+                                    href={item.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                                  >
+                                    Read full article <ExternalLinkIcon className="size-3" />
+                                  </a>
+                                ) : null}
+                              </div>
                             ) : null}
                           </div>
-                        </details>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
