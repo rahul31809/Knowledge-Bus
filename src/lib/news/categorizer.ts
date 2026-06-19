@@ -1,7 +1,14 @@
 import { GoogleGenAI } from "@google/genai";
 import { NEWS_SECTIONS, type NewsSection } from "@/lib/types";
 
-const SECTION_LIST = NEWS_SECTIONS.map((section) => `- ${section}`).join("\n");
+const SECTION_HINTS: Partial<Record<NewsSection, string>> = {
+  "AI & Emerging Tech": "AI models/tools/research, AI adoption or integration within any industry or value chain, and other emerging tech",
+};
+
+const SECTION_LIST = NEWS_SECTIONS.map((section) => {
+  const hint = SECTION_HINTS[section];
+  return hint ? `- ${section} (${hint})` : `- ${section}`;
+}).join("\n");
 const CHUNK_SIZE = 30;
 const CHUNK_DELAY_MS = 4000;
 

@@ -262,6 +262,37 @@ export async function fetchMagazineArticlesByCategory(supabase: SupabaseServerCl
   }).filter((group) => group.articles.length > 0);
 }
 
+export async function searchMagazineArticles(supabase: SupabaseServerClient, query: string): Promise<MagazineArticle[]> {
+  const q = query.trim();
+  if (!q) return [];
+
+  const { data, error } = await supabase
+    .from("magazine_articles")
+    .select("id, title, section, order_index, is_read, magazine_issues(source, file_name, web_view_link, drive_modified_time)")
+    .ilike("title", `%${q}%`)
+    .limit(20);
+
+  if (error) return [];
+
+  return (data ?? [])
+    .map((row) => row as unknown as MagazineArticleRow)
+    .filter((row) => row.magazine_issues)
+    .map((row) => {
+      const issue = row.magazine_issues!;
+      const section: MagazineSection = (MAGAZINE_SECTIONS as readonly string[]).includes(row.section)
+        ? (row.section as MagazineSection)
+        : "Other";
+      return {
+        id: row.id,
+        title: row.title,
+        section,
+        isRead: row.is_read,
+        webViewLink: issue.web_view_link,
+        issueLabel: `${issue.source} — ${issue.file_name.replace(/\.pdf$/i, "")}`,
+      };
+    });
+}
+
 export async function fetchIndustryPrimer(
   supabase: SupabaseServerClient,
   industrySlug: string,

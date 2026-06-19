@@ -11,4 +11,8 @@ export const NEWS_SOURCES: NewsSource[] = [
   { name: "ET Energy", feedUrl: "https://energy.economictimes.indiatimes.com/rss/topstories" },
   { name: "Aswath Damodaran", feedUrl: "https://aswathdamodaran.substack.com/feed" },
   { name: "Finshots", feedUrl: "https://finshots.in/rss/" },
+  { name: "TechCrunch AI", feedUrl: "https://techcrunch.com/category/artificial-intelligence/feed/" },
+  { name: "VentureBeat AI", feedUrl: "https://venturebeat.com/category/ai/feed/" },
+  { name: "The Verge AI", feedUrl: "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml" },
+  { name: "MIT Technology Review", feedUrl: "https://www.technologyreview.com/feed/" },
 ];

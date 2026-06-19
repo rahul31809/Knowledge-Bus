@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   BarChart3Icon,
   BookmarkIcon,
+  BrainCircuitIcon,
   BriefcaseIcon,
   ChevronDownIcon,
   CompassIcon,
@@ -23,6 +24,7 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
   "Economy & Policy": LandmarkIcon,
   "Energy & Infrastructure": ZapIcon,
   "Valuation & Corporate Finance": BarChart3Icon,
+  "AI & Emerging Tech": BrainCircuitIcon,
 };
 
 export function ExploreMenu() {

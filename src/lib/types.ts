@@ -286,6 +286,7 @@ export const NEWS_SECTIONS = [
   "Economy & Policy",
   "Energy & Infrastructure",
   "Valuation & Corporate Finance",
+  "AI & Emerging Tech",
   "Other",
 ] as const;
 
