@@ -262,6 +262,18 @@ export async function fetchMagazineArticlesByCategory(supabase: SupabaseServerCl
   }).filter((group) => group.articles.length > 0);
 }
 
+export interface GmailConnectionStatus {
+  connected: boolean;
+  email: string | null;
+  lastScannedAt: string | null;
+}
+
+export async function fetchGmailConnectionStatus(supabase: SupabaseServerClient): Promise<GmailConnectionStatus> {
+  const { data, error } = await supabase.from("gmail_connection_status").select("*").maybeSingle();
+  if (error || !data) return { connected: false, email: null, lastScannedAt: null };
+  return { connected: true, email: data.email ?? null, lastScannedAt: data.last_scanned_at ?? null };
+}
+
 export async function searchMagazineArticles(supabase: SupabaseServerClient, query: string): Promise<MagazineArticle[]> {
   const q = query.trim();
   if (!q) return [];
