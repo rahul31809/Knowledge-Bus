@@ -1,5 +1,6 @@
 import { ArticleGrid } from "@/components/news/article-grid";
 import { ExploreMenu } from "@/components/news/explore-menu";
+import { NewsSearchBox } from "@/components/news/news-search-box";
 import { RefreshNewsButton } from "@/components/news/refresh-news-button";
 import { fetchLatestNewsArticles } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
@@ -18,6 +19,7 @@ export default async function NewsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <NewsSearchBox />
           <RefreshNewsButton />
           <ExploreMenu />
         </div>

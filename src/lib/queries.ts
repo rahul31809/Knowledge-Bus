@@ -452,3 +452,19 @@ export async function fetchSavedNewsArticles(supabase: SupabaseServerClient): Pr
   if (error) return [];
   return (data ?? []).map((row) => mapNewsArticleRow(row as NewsArticleRow));
 }
+
+export async function searchNewsArticles(supabase: SupabaseServerClient, query: string): Promise<NewsArticle[]> {
+  // Strip PostgREST filter-string delimiters and SQL LIKE wildcards from user input
+  const safe = query.replace(/[,()%_]/g, " ").trim();
+  if (!safe) return [];
+
+  const { data, error } = await supabase
+    .from("news_articles")
+    .select(NEWS_ARTICLE_COLUMNS)
+    .or(`title.ilike.%${safe}%,summary.ilike.%${safe}%,source.ilike.%${safe}%`)
+    .order("published_at", { ascending: false })
+    .limit(60);
+
+  if (error) return [];
+  return (data ?? []).map((row) => mapNewsArticleRow(row as NewsArticleRow));
+}
