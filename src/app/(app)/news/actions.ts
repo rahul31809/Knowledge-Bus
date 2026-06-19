@@ -11,7 +11,7 @@ export async function setNewsArticleReadStatus(articleId: string, isRead: boolea
     throw new Error(error.message);
   }
 
-  revalidatePath("/news");
+  revalidatePath("/news", "layout");
 }
 
 export async function setNewsArticleSavedStatus(articleId: string, isSaved: boolean): Promise<void> {
@@ -22,5 +22,16 @@ export async function setNewsArticleSavedStatus(articleId: string, isSaved: bool
     throw new Error(error.message);
   }
 
-  revalidatePath("/news");
+  revalidatePath("/news", "layout");
+}
+
+export async function setNewsArticleBookmarkedStatus(articleId: string, isBookmarked: boolean): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("news_articles").update({ is_bookmarked: isBookmarked }).eq("id", articleId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/news", "layout");
 }

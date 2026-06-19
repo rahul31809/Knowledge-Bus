@@ -297,9 +297,11 @@ export interface NewsArticle {
   link: string;
   source: string;
   summary: string;
+  category: NewsSection;
   publishedAt: string | null;
   isRead: boolean;
   isSaved: boolean;
+  isBookmarked: boolean;
 }
 
 export interface NewsCategoryGroup {

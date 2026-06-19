@@ -361,12 +361,33 @@ interface NewsArticleRow {
   category: string;
   is_read: boolean;
   is_saved: boolean;
+  is_bookmarked: boolean;
+}
+
+const NEWS_ARTICLE_COLUMNS = "id, title, link, source, summary, published_at, category, is_read, is_saved, is_bookmarked";
+
+function mapNewsArticleRow(row: NewsArticleRow): NewsArticle {
+  const section: NewsSection = (NEWS_SECTIONS as readonly string[]).includes(row.category)
+    ? (row.category as NewsSection)
+    : "Other";
+  return {
+    id: row.id,
+    title: row.title,
+    link: row.link,
+    source: row.source,
+    summary: row.summary ?? "",
+    category: section,
+    publishedAt: row.published_at,
+    isRead: row.is_read,
+    isSaved: row.is_saved,
+    isBookmarked: row.is_bookmarked,
+  };
 }
 
 export async function fetchNewsArticlesByCategory(supabase: SupabaseServerClient): Promise<NewsCategoryGroup[]> {
   const { data, error } = await supabase
     .from("news_articles")
-    .select("id, title, link, source, summary, published_at, category, is_read, is_saved")
+    .select(NEWS_ARTICLE_COLUMNS)
     .order("published_at", { ascending: false });
 
   if (error) {
@@ -376,26 +397,58 @@ export async function fetchNewsArticlesByCategory(supabase: SupabaseServerClient
   const bySection = new Map<NewsSection, NewsArticle[]>();
 
   for (const row of (data ?? []) as NewsArticleRow[]) {
-    const section: NewsSection = (NEWS_SECTIONS as readonly string[]).includes(row.category)
-      ? (row.category as NewsSection)
-      : "Other";
-
-    const articles = bySection.get(section) ?? [];
-    articles.push({
-      id: row.id,
-      title: row.title,
-      link: row.link,
-      source: row.source,
-      summary: row.summary ?? "",
-      publishedAt: row.published_at,
-      isRead: row.is_read,
-      isSaved: row.is_saved,
-    });
-    bySection.set(section, articles);
+    const article = mapNewsArticleRow(row);
+    const articles = bySection.get(article.category) ?? [];
+    articles.push(article);
+    bySection.set(article.category, articles);
   }
 
   return NEWS_SECTIONS.map((section) => ({
     section,
     articles: bySection.get(section) ?? [],
   })).filter((group) => group.articles.length > 0);
+}
+
+export async function fetchLatestNewsArticles(supabase: SupabaseServerClient, limit: number): Promise<NewsArticle[]> {
+  const { data, error } = await supabase
+    .from("news_articles")
+    .select(NEWS_ARTICLE_COLUMNS)
+    .order("published_at", { ascending: false })
+    .limit(limit);
+
+  if (error) return [];
+  return (data ?? []).map((row) => mapNewsArticleRow(row as NewsArticleRow));
+}
+
+export async function fetchNewsArticlesBySection(supabase: SupabaseServerClient, section: NewsSection): Promise<NewsArticle[]> {
+  const { data, error } = await supabase
+    .from("news_articles")
+    .select(NEWS_ARTICLE_COLUMNS)
+    .eq("category", section)
+    .order("published_at", { ascending: false });
+
+  if (error) return [];
+  return (data ?? []).map((row) => mapNewsArticleRow(row as NewsArticleRow));
+}
+
+export async function fetchBookmarkedNewsArticles(supabase: SupabaseServerClient): Promise<NewsArticle[]> {
+  const { data, error } = await supabase
+    .from("news_articles")
+    .select(NEWS_ARTICLE_COLUMNS)
+    .eq("is_bookmarked", true)
+    .order("published_at", { ascending: false });
+
+  if (error) return [];
+  return (data ?? []).map((row) => mapNewsArticleRow(row as NewsArticleRow));
+}
+
+export async function fetchSavedNewsArticles(supabase: SupabaseServerClient): Promise<NewsArticle[]> {
+  const { data, error } = await supabase
+    .from("news_articles")
+    .select(NEWS_ARTICLE_COLUMNS)
+    .eq("is_saved", true)
+    .order("published_at", { ascending: false });
+
+  if (error) return [];
+  return (data ?? []).map((row) => mapNewsArticleRow(row as NewsArticleRow));
 }

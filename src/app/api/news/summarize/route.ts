@@ -1,15 +1,12 @@
 import { GoogleGenAI } from "@google/genai";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { NEWS_SECTIONS } from "@/lib/types";
 
 export const maxDuration = 30;
 
 interface SummarizeRequestBody {
-  section?: string;
+  articleId?: string;
 }
-
-const ARTICLE_LIMIT = 8;
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -19,26 +16,20 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json()) as SummarizeRequestBody;
-  const section = body.section;
+  const articleId = body.articleId?.trim();
 
-  if (!section || !(NEWS_SECTIONS as readonly string[]).includes(section)) {
-    return NextResponse.json({ error: "Invalid or missing section" }, { status: 400 });
+  if (!articleId) {
+    return NextResponse.json({ error: "Missing articleId" }, { status: 400 });
   }
 
-  const { data, error } = await supabase
+  const { data: article, error } = await supabase
     .from("news_articles")
-    .select("title, summary")
-    .eq("category", section)
-    .order("published_at", { ascending: false })
-    .limit(ARTICLE_LIMIT);
+    .select("title, summary, source")
+    .eq("id", articleId)
+    .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  const articles = data ?? [];
-  if (articles.length === 0) {
-    return NextResponse.json({ error: "No articles in this section yet" }, { status: 404 });
+  if (error || !article) {
+    return NextResponse.json({ error: "Article not found" }, { status: 404 });
   }
 
   const apiKey = process.env.GOOGLE_AI_API_KEY;
@@ -48,16 +39,18 @@ export async function POST(request: Request) {
 
   const ai = new GoogleGenAI({ apiKey });
 
-  const articleList = articles
-    .map((a, i) => `${i + 1}. ${a.title}${a.summary ? ` — ${a.summary}` : ""}`)
-    .join("\n");
+  const prompt = `You are briefing an MBA student preparing for strategy consulting interviews (Big 4 / Accenture Strategy, India-focused recruiting) on this news article:
 
-  const prompt = `You are briefing an MBA student preparing for strategy consulting interviews (Big 4 / Accenture Strategy, India-focused recruiting) on recent news in the "${section}" category.
+Title: ${article.title}
+Source: ${article.source}
+Snippet: ${article.summary ?? "(no snippet available)"}
 
-Here are the recent article headlines and summaries:
-${articleList}
+Write a tight analyst summary (4-5 sentences):
+- What exactly happened — the core fact
+- The business or market implication — why it matters
+- One sentence on how this could surface in a case interview or business discussion
 
-Write a "so what" takeaway: 2-3 bullet points covering the key stories and why they matter for someone building consulting case-readiness and business fluency. Markdown allowed (e.g. **bold** for key terms). Output ONLY the bullet points, no preamble.`;
+Use **bold** for key terms and numbers. Output only the summary — no headers, no preamble.`;
 
   const result = await ai.models.generateContent({
     model: "gemini-3.1-flash-lite",
