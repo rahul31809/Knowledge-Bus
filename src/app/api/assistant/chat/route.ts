@@ -11,8 +11,9 @@ import {
   fetchSubjects,
   searchMagazineArticles,
   searchNewsArticles,
+  withDriveOnlySubjects,
 } from "@/lib/queries";
-import { fetchSubjectDriveResources, type DriveFileGroup } from "@/lib/drive-sync/client";
+import { fetchDriveSubjectNames, fetchSubjectDriveResources, type DriveFileGroup } from "@/lib/drive-sync/client";
 import { createClient } from "@/lib/supabase/server";
 
 export const maxDuration = 60;
@@ -175,12 +176,17 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
   try {
     switch (name) {
       case "list_subjects": {
-        const subjects = await fetchSubjects(supabase);
-        return subjects.map((s) => ({
+        const [subjects, driveNames] = await Promise.all([
+          fetchSubjects(supabase),
+          fetchDriveSubjectNames().catch(() => null),
+        ]);
+        const merged = withDriveOnlySubjects(subjects, driveNames);
+        return merged.map((s) => ({
           subject: s.subject,
           sessionCount: s.sessionCount,
           entryCount: s.entryCount,
           latestDate: s.latestDate,
+          notesSynced: s.entryCount > 0,
         }));
       }
       case "list_sessions": {
@@ -291,6 +297,7 @@ You have tools to look up real data already stored in this app:
 
 Rules:
 - Always call a tool before answering questions about app content — never guess or invent what's "in" the app.
+- If the user names a specific subject/session/topic, try the most direct tool first (e.g. find_pre_reads or get_session_notes) using the name as given — don't first check list_subjects and refuse if it's not an exact match there. list_subjects only reflects subjects with synced study notes plus Drive folder names it could detect; a subject can still be valid in Drive even if absent or differently capitalized there. Only fall back to suggesting alternatives if the direct tool itself returns "not_found" or an error.
 - If a tool returns an error or no results, say so plainly. Don't make up subjects, sessions, articles, files, or primers that weren't returned by a tool.
 - When citing an internal page, format as a markdown link using these URL patterns:
   - Subject page: /subjects/<subject>
