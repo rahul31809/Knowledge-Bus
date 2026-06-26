@@ -7,10 +7,13 @@ import type { DriveFileEntry } from "./client";
 // falling back to the Files API (createPartFromUri) for larger PDFs.
 const INLINE_SIZE_LIMIT = 8 * 1024 * 1024;
 
-// How long to wait for an uploaded file to leave the PROCESSING state before
-// giving up and referencing it anyway.
-const UPLOAD_READY_TIMEOUT_MS = 30000;
-const UPLOAD_POLL_INTERVAL_MS = 2000;
+// How long to wait for an uploaded file to become ACTIVE before giving up.
+// Large magazine-issue PDFs routinely take longer than 30s to finish
+// processing on Gemini's side; referencing a file that's still PROCESSING
+// causes generateContent to fail with INVALID_ARGUMENT ("not in an ACTIVE
+// state"), so it's not safe to proceed without it.
+const UPLOAD_READY_TIMEOUT_MS = 120000;
+const UPLOAD_POLL_INTERVAL_MS = 3000;
 
 const SECTION_LIST = MAGAZINE_SECTIONS.map((s) => `- ${s}`).join("\n");
 
@@ -68,7 +71,7 @@ Example: [{"title": "The New Rules of Competition", "section": "Strategy & Compe
       uploaded = await ai.files.get({ name: uploaded.name });
     }
 
-    if (uploaded.state === FileState.FAILED || !uploaded.uri || !uploaded.mimeType) return [];
+    if (uploaded.state !== FileState.ACTIVE || !uploaded.uri || !uploaded.mimeType) return [];
     part = createPartFromUri(uploaded.uri, uploaded.mimeType);
   }
 
