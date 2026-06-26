@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { sanitizeBodyHtml } from "@/lib/sanitize";
-import { ArrowLeftIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { EntryActions } from "@/components/entry-actions";
 import { entryTypeLabel, formatEntryDate } from "@/lib/types";
 import { fetchEntryById } from "@/lib/queries";
@@ -28,11 +28,8 @@ export default async function EntryDetailPage({ params }: { params: Promise<{ id
 
   return (
     <article className="mx-auto flex max-w-3xl flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeftIcon className="size-3.5" />
-          Back to Knowledge Base
-        </Link>
+      <div className="flex items-center justify-between gap-4">
+        <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: entry.title }]} />
         <EntryActions entryId={entry.id} title={entry.title} onDelete={deleteEntry.bind(null, entry.id)} />
       </div>
 

@@ -3,6 +3,7 @@ import { ExploreMenu } from "@/components/news/explore-menu";
 import { GmailConnect } from "@/components/news/gmail-connect";
 import { NewsSearchBox } from "@/components/news/news-search-box";
 import { RefreshNewsButton } from "@/components/news/refresh-news-button";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { fetchGmailConnectionStatus, fetchLatestNewsArticles } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 
@@ -15,6 +16,8 @@ export default async function NewsPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Current News" }]} />
+
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="font-serif text-3xl font-semibold text-foreground">Current News</h1>

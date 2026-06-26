@@ -1,10 +1,13 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { EntryForm } from "@/components/entry-form";
 import { createEntry } from "./actions";
 
 export default function NewEntryPage() {
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto flex max-w-3xl flex-col gap-6">
+      <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Add Entry" }]} />
+
       <Card>
         <CardHeader>
           <CardTitle>Add Entry</CardTitle>

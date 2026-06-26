@@ -50,6 +50,16 @@ export async function fetchEntries(supabase: SupabaseServerClient, filters: Entr
   return (data ?? []) as KnowledgeEntry[];
 }
 
+export async function fetchRecentEntries(supabase: SupabaseServerClient, limit: number): Promise<KnowledgeEntry[]> {
+  const { data, error } = await supabase
+    .from("knowledge_entries")
+    .select("*")
+    .order("updated_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as KnowledgeEntry[];
+}
+
 export async function fetchEntryById(supabase: SupabaseServerClient, id: string): Promise<KnowledgeEntry | null> {
   const { data, error } = await supabase.from("knowledge_entries").select("*").eq("id", id).maybeSingle();
   if (error) throw error;

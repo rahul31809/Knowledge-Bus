@@ -1,4 +1,5 @@
 import { MagazineLibrary } from "@/components/magazine-library";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { fetchMagazineArticlesByCategory } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 
@@ -8,6 +9,8 @@ export default async function MagazinesPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Articles" }]} />
+
       <div>
         <h1 className="text-2xl font-semibold text-foreground">Magazines</h1>
         <p className="text-sm text-muted-foreground">

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { EntryForm } from "@/components/entry-form";
 import { fetchEntryById } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
@@ -13,7 +14,15 @@ export default async function EditEntryPage({ params }: { params: Promise<{ id: 
   if (!entry) notFound();
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto flex max-w-3xl flex-col gap-6">
+      <Breadcrumbs
+        items={[
+          { label: "Home", href: "/" },
+          { label: entry.title, href: `/entries/${entry.id}` },
+          { label: "Edit" },
+        ]}
+      />
+
       <Card>
         <CardHeader>
           <CardTitle>Edit Entry</CardTitle>

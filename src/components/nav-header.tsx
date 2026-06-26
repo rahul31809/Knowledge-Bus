@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { signOut } from "@/app/login/actions";
 
 export function NavHeader({ userEmail }: { userEmail: string | null }) {
@@ -44,7 +43,6 @@ export function NavHeader({ userEmail }: { userEmail: string | null }) {
               Search
             </Button>
           </form>
-          <ThemeToggle />
           <form action={signOut}>
             <Button type="submit" variant="ghost" size="sm" title={userEmail ?? undefined}>
               Sign out

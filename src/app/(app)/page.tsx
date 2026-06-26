@@ -1,22 +1,33 @@
 import Link from "next/link";
 import { BookmarkIcon, Building2Icon, GraduationCapIcon, NewspaperIcon, RssIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { ConductorAvatar } from "@/components/assistant/conductor-avatar";
 import { DashboardCard } from "@/components/dashboard-card";
+import { GreetingHeading } from "@/components/greeting-heading";
 import { fetchDriveSubjectNames } from "@/lib/drive-sync/client";
 import { INDUSTRY_TAXONOMY } from "@/lib/industry-taxonomy";
-import { fetchEntries, fetchMagazineArticlesByCategory, fetchNewsArticlesByCategory, fetchSubjects, withDriveOnlySubjects } from "@/lib/queries";
+import {
+  fetchEntries,
+  fetchMagazineArticlesByCategory,
+  fetchNewsArticlesByCategory,
+  fetchRecentEntries,
+  fetchSubjects,
+  withDriveOnlySubjects,
+} from "@/lib/queries";
+import { entryTypeLabel, formatEntryDate } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
 export default async function BrowsePage() {
   const supabase = await createClient();
 
-  const [subjects, driveSubjectNames, categories, briefingEntries, newsCategories] = await Promise.all([
+  const [subjects, driveSubjectNames, categories, briefingEntries, newsCategories, recentEntries] = await Promise.all([
     fetchSubjects(supabase),
     fetchDriveSubjectNames().catch(() => null),
     fetchMagazineArticlesByCategory(supabase),
     fetchEntries(supabase, { excludeType: "study_notes" }),
     fetchNewsArticlesByCategory(supabase),
+    fetchRecentEntries(supabase, 3),
   ]);
 
   const allSubjects = withDriveOnlySubjects(subjects, driveSubjectNames);
@@ -33,13 +44,16 @@ export default async function BrowsePage() {
         <div className="pointer-events-none absolute -top-16 -right-16 size-56 rounded-full bg-white/10 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-20 left-1/4 size-64 rounded-full bg-white/10 blur-3xl" />
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Your Knowledge Base</h1>
-            <p className="mt-2 text-sm text-indigo-100 sm:text-base">
-              {allSubjects.length} subjects · {allArticles.length} articles
-              {allArticles.length > 0 ? ` (${unreadArticles.length} unread)` : ""} · {briefingEntries.length} saved
-              readings
-            </p>
+          <div className="flex items-center gap-4">
+            <ConductorAvatar className="hidden size-16 shrink-0 sm:block" />
+            <div>
+              <GreetingHeading name="Rahul" />
+              <p className="mt-2 text-sm text-indigo-100 sm:text-base">
+                {allSubjects.length} subjects · {allArticles.length} articles
+                {allArticles.length > 0 ? ` (${unreadArticles.length} unread)` : ""} · {briefingEntries.length} saved
+                readings
+              </p>
+            </div>
           </div>
           <Link
             href="/entries/new"
@@ -50,7 +64,29 @@ export default async function BrowsePage() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      {recentEntries.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Continue where you left off</p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {recentEntries.map((entry) => (
+              <Link
+                key={entry.id}
+                href={`/entries/${entry.id}`}
+                className="flex flex-col gap-1 rounded-lg border border-border bg-card p-3.5 transition-colors hover:border-primary/40"
+              >
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>{entryTypeLabel(entry.entry_type)}</span>
+                  <span>·</span>
+                  <span>{formatEntryDate(entry.entry_date)}</span>
+                </div>
+                <p className="line-clamp-1 text-sm font-medium text-foreground">{entry.title}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <div className="grid gap-4 sm:grid-cols-3">
         <DashboardCard
           href="/subjects"
           icon={GraduationCapIcon}
@@ -58,6 +94,21 @@ export default async function BrowsePage() {
           title="MBA Study Materials"
           description="Course materials organized by term"
           meta={`${allSubjects.length} subjects`}
+          size="featured"
+          className="animate-fade-in-up sm:col-span-2"
+          style={{ animationDelay: "0ms" }}
+        />
+
+        <DashboardCard
+          href="/industries"
+          icon={Building2Icon}
+          accent="indigo"
+          title="Industries"
+          description="AI-generated consultant-style primers across sectors and sub-sectors"
+          meta={`${INDUSTRY_TAXONOMY.length} sectors`}
+          size="featured"
+          className="animate-fade-in-up"
+          style={{ animationDelay: "60ms" }}
         />
 
         <DashboardCard
@@ -67,6 +118,8 @@ export default async function BrowsePage() {
           title="Articles"
           description="Picks from the tables of contents of your magazine issues"
           meta={allArticles.length > 0 ? `${allArticles.length} articles · ${unreadArticles.length} unread` : undefined}
+          className="animate-fade-in-up"
+          style={{ animationDelay: "120ms" }}
         />
 
         <DashboardCard
@@ -80,6 +133,8 @@ export default async function BrowsePage() {
               ? `${allNewsArticles.length} articles · ${unreadNewsArticles.length} unread`
               : "No articles yet"
           }
+          className="animate-fade-in-up"
+          style={{ animationDelay: "180ms" }}
         />
 
         <DashboardCard
@@ -89,15 +144,8 @@ export default async function BrowsePage() {
           title="Reading & Briefings"
           description="Saved notes, industry briefings and PPT takeaways"
           meta={`${briefingEntries.length} saved`}
-        />
-
-        <DashboardCard
-          href="/industries"
-          icon={Building2Icon}
-          accent="indigo"
-          title="Industries"
-          description="AI-generated consultant-style primers across sectors and sub-sectors"
-          meta={`${INDUSTRY_TAXONOMY.length} sectors`}
+          className="animate-fade-in-up"
+          style={{ animationDelay: "240ms" }}
         />
       </div>
     </div>
