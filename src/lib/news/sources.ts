@@ -15,4 +15,5 @@ export const NEWS_SOURCES: NewsSource[] = [
   { name: "VentureBeat AI", feedUrl: "https://venturebeat.com/category/ai/feed/" },
   { name: "The Verge AI", feedUrl: "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml" },
   { name: "MIT Technology Review", feedUrl: "https://www.technologyreview.com/feed/" },
+  { name: "Inc42", feedUrl: "https://inc42.com/feed/" },
 ];

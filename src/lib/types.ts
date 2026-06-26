@@ -207,6 +207,38 @@ export interface IndustryPrimer extends IndustryPrimerContent {
   updated_at: string;
 }
 
+// AI-generated 20-section deep-dive on a single company, reachable from an
+// industry primer's Major Players list. Each section is free-form markdown
+// (not structured fields like the primer) — the brief itself is a long-form
+// consulting report, so markdown is the natural shape and avoids needing a
+// bespoke schema per section.
+export interface CompanyAnalysisSection {
+  title: string;
+  markdown: string;
+}
+
+export interface CompanyAnalysisChunk {
+  sections: CompanyAnalysisSection[];
+}
+
+export interface CompanyAnalysisContent {
+  chunk_foundation: CompanyAnalysisChunk;
+  chunk_market: CompanyAnalysisChunk;
+  chunk_execution: CompanyAnalysisChunk;
+  chunk_outlook: CompanyAnalysisChunk;
+  chunk_strategy_prep: CompanyAnalysisChunk;
+}
+
+export interface CompanyAnalysis extends CompanyAnalysisContent {
+  id: string;
+  industry_slug: string;
+  subsector_slug: string;
+  company_name: string;
+  generated_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface QaSource {
   uri: string;
   title: string;

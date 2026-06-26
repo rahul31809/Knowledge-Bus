@@ -3,6 +3,8 @@ import {
   MAGAZINE_SECTIONS,
   NEWS_SECTIONS,
   UNSORTED_LABEL,
+  type CompanyAnalysis,
+  type CompanyAnalysisContent,
   type DriveFileTag,
   type IndustryPrimer,
   type IndustryPrimerContent,
@@ -352,6 +354,55 @@ export async function saveIndustryPrimer(
 
   if (error) throw error;
   return data as IndustryPrimer;
+}
+
+export async function fetchCompanyAnalysis(
+  supabase: SupabaseServerClient,
+  industrySlug: string,
+  subsectorSlug: string,
+  companyName: string
+): Promise<CompanyAnalysis | null> {
+  const { data, error } = await supabase
+    .from("company_analyses")
+    .select("*")
+    .eq("industry_slug", industrySlug)
+    .eq("subsector_slug", subsectorSlug)
+    .eq("company_name", companyName)
+    .maybeSingle();
+
+  if (error) {
+    // Postgres "undefined_table" — migration 0017 hasn't run yet. Treat as
+    // "no analysis yet" so the page falls back to generating one.
+    if (error.code === "42P01") return null;
+    throw error;
+  }
+  return data as CompanyAnalysis | null;
+}
+
+export async function saveCompanyAnalysis(
+  supabase: SupabaseServerClient,
+  industrySlug: string,
+  subsectorSlug: string,
+  companyName: string,
+  content: CompanyAnalysisContent
+): Promise<CompanyAnalysis> {
+  const { data, error } = await supabase
+    .from("company_analyses")
+    .upsert(
+      {
+        industry_slug: industrySlug,
+        subsector_slug: subsectorSlug,
+        company_name: companyName,
+        ...content,
+        generated_at: new Date().toISOString(),
+      },
+      { onConflict: "industry_slug,subsector_slug,company_name" }
+    )
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return data as CompanyAnalysis;
 }
 
 export async function fetchIndustryPrimerNotes(

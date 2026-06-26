@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRightIcon, ExternalLinkIcon, ImageIcon, Loader2Icon, NewspaperIcon, PlusIcon, SearchIcon, XIcon } from "lucide-react";
+import { ChevronRightIcon, ExternalLinkIcon, FileTextIcon, ImageIcon, Loader2Icon, NewspaperIcon, PlusIcon, SearchIcon, XIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import type { FinancialCompanyResult } from "@/app/api/industries/financials/route";
@@ -28,12 +28,14 @@ export function PlayerComparison({
   players,
   industryName,
   subsectorName,
+  industrySlug,
   subsectorSlug,
   searchContext,
 }: {
   players: PrimerPlayer[];
   industryName: string;
   subsectorName: string;
+  industrySlug: string;
   subsectorSlug: string;
   searchContext: string;
 }) {
@@ -361,6 +363,15 @@ export function PlayerComparison({
                   )}
                 </div>
                 {candidate.positioning ? <p className="mt-1 text-xs text-muted-foreground">{candidate.positioning}</p> : null}
+                <a
+                  href={`/industries/${industrySlug}/${subsectorSlug}/company/${encodeURIComponent(candidate.name)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                >
+                  <FileTextIcon className="size-3" />
+                  Full Company Analysis
+                </a>
               </div>
               {candidate.custom ? (
                 <button
