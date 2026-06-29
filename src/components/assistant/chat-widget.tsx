@@ -2,9 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { Loader2Icon, SendIcon, XIcon } from "lucide-react";
+import { Loader2Icon, MessageCircleIcon, SendIcon, XIcon } from "lucide-react";
 import { Markdown } from "@/components/industry-primer/markdown";
-import { ConductorAvatar } from "./conductor-avatar";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -65,10 +64,10 @@ export function ChatWidget() {
         type="button"
         onClick={() => setOpen(true)}
         className="fixed bottom-5 right-5 z-50 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow-lg hover:opacity-90"
-        aria-label="Open Conductor"
+        aria-label="Open assistant"
       >
-        <ConductorAvatar className="size-8" />
-        Ask Conductor
+        <MessageCircleIcon className="size-5" />
+        Ask
       </button>
     );
   }
@@ -76,12 +75,9 @@ export function ChatWidget() {
   return (
     <div className="fixed bottom-5 right-5 left-5 z-50 flex h-[32rem] max-h-[calc(100vh-7rem)] w-auto max-w-96 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl sm:left-auto sm:w-96">
       <div className="flex items-center justify-between border-b border-border bg-muted/40 px-4 py-3">
-        <div className="flex items-center gap-2.5">
-          <ConductorAvatar className="size-10 shrink-0" />
-          <div>
-            <p className="text-sm font-semibold text-foreground">Conductor</p>
-            <p className="text-xs text-muted-foreground">Searches subjects, news, industries &amp; readings</p>
-          </div>
+        <div>
+          <p className="text-sm font-semibold text-foreground">Knowledge Base Assistant</p>
+          <p className="text-xs text-muted-foreground">Searches subjects, news, industries &amp; readings</p>
         </div>
         <div className="flex items-center gap-2">
           {messages.length > 0 ? (
@@ -116,7 +112,7 @@ export function ChatWidget() {
           <div className="flex justify-start">
             <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
               <Loader2Icon className="size-3 animate-spin" />
-              Conductor is checking the route…
+              Looking that up…
             </div>
           </div>
         ) : null}
@@ -129,7 +125,7 @@ export function ChatWidget() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ask anything about your knowledge base…"
-          aria-label="Ask Conductor"
+          aria-label="Ask the assistant"
           disabled={loading}
           className="flex-1 rounded-md border border-input px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
         />

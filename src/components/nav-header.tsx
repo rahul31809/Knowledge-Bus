@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { CommandIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { signOut } from "@/app/login/actions";
 
 export function NavHeader({ userEmail }: { userEmail: string | null }) {
@@ -31,6 +33,16 @@ export function NavHeader({ userEmail }: { userEmail: string | null }) {
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event("open-command-palette"))}
+            className="hidden items-center gap-1.5 rounded-md border border-input px-2.5 py-1.5 text-xs text-muted-foreground hover:border-primary/40 hover:text-foreground sm:flex"
+            aria-label="Open quick jump (Ctrl+K)"
+          >
+            <CommandIcon className="size-3.5" />
+            <span>Jump to…</span>
+            <kbd className="ml-1 rounded border border-border bg-muted px-1 font-mono text-[10px]">Ctrl K</kbd>
+          </button>
           <form onSubmit={handleSearch} className="flex items-center gap-2">
             <Input
               type="search"
@@ -43,6 +55,7 @@ export function NavHeader({ userEmail }: { userEmail: string | null }) {
               Search
             </Button>
           </form>
+          <ThemeToggle />
           <form action={signOut}>
             <Button type="submit" variant="ghost" size="sm" title={userEmail ?? undefined}>
               Sign out

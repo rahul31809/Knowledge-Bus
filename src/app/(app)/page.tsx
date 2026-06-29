@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { BookmarkIcon, Building2Icon, GraduationCapIcon, NewspaperIcon, RssIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
-import { ConductorAvatar } from "@/components/assistant/conductor-avatar";
 import { DashboardCard } from "@/components/dashboard-card";
 import { GreetingHeading } from "@/components/greeting-heading";
 import { fetchDriveSubjectNames } from "@/lib/drive-sync/client";
@@ -44,16 +43,13 @@ export default async function BrowsePage() {
         <div className="pointer-events-none absolute -top-16 -right-16 size-56 rounded-full bg-white/10 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-20 left-1/4 size-64 rounded-full bg-white/10 blur-3xl" />
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <ConductorAvatar className="hidden size-16 shrink-0 sm:block" />
-            <div>
-              <GreetingHeading name="Rahul" />
-              <p className="mt-2 text-sm text-indigo-100 sm:text-base">
-                {allSubjects.length} subjects · {allArticles.length} articles
-                {allArticles.length > 0 ? ` (${unreadArticles.length} unread)` : ""} · {briefingEntries.length} saved
-                readings
-              </p>
-            </div>
+          <div>
+            <GreetingHeading name="Rahul" />
+            <p className="mt-2 text-sm text-indigo-100 sm:text-base">
+              {allSubjects.length} subjects · {allArticles.length} articles
+              {allArticles.length > 0 ? ` (${unreadArticles.length} unread)` : ""} · {briefingEntries.length} saved
+              readings
+            </p>
           </div>
           <Link
             href="/entries/new"
