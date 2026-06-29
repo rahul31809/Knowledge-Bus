@@ -5,7 +5,7 @@ import { Breadcrumbs } from "@/components/breadcrumbs";
 import { SessionCard } from "@/components/session-card";
 import { SubjectDriveFiles } from "@/components/subject-drive-files";
 import { buttonVariants } from "@/components/ui/button";
-import { fetchSubjectDriveResources, type SubjectDriveLookup } from "@/lib/drive-sync/client";
+import { fetchDriveSubjectsByCategory, fetchSubjectDriveResources, type SubjectDriveLookup } from "@/lib/drive-sync/client";
 import { fetchDriveFileTagsForSubject, fetchSessions, fetchSubjectProfile } from "@/lib/queries";
 import { UNSORTED_LABEL, type SubjectProfile } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
@@ -31,19 +31,22 @@ export default async function SubjectPage({ params }: { params: Promise<{ subjec
   const subject = decodeURIComponent(subjectParam);
 
   const supabase = await createClient();
-  const [sessions, profile, drive, driveTags] = await Promise.all([
+  const [sessions, profile, drive, driveTags, categories] = await Promise.all([
     fetchSessions(supabase, subject).catch(() => [] as Awaited<ReturnType<typeof fetchSessions>>),
     fetchSubjectProfile(supabase, subject).catch(() => null),
     fetchSubjectDriveResources(subject).catch(
       (): SubjectDriveLookup => ({ status: "unavailable" })
     ),
     fetchDriveFileTagsForSubject(supabase, subject).catch(() => [] as Awaited<ReturnType<typeof fetchDriveFileTagsForSubject>>),
+    fetchDriveSubjectsByCategory().catch(() => null),
   ]);
 
   // A subject is real if it has synced notes OR a matching Drive folder.
   // "unavailable" (Drive unreachable/unconfigured) never triggers a 404 on
   // its own — that would 404 real subjects whenever Drive has a hiccup.
   if (sessions.length === 0 && drive.status !== "found") notFound();
+
+  const category = categories?.find((c) => c.subjects.some((s) => s.name === subject)) ?? null;
 
   const driveFiles = drive.status === "found" ? drive.files : null;
   const fileDataMap = new Map(driveTags.map((t) => [t.file_id, { tags: t.tags, summary: t.ai_summary }]));
@@ -55,7 +58,16 @@ export default async function SubjectPage({ params }: { params: Promise<{ subjec
 
   return (
     <div className="flex flex-col gap-6">
-      <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: subject }]} />
+      <Breadcrumbs
+        items={[
+          { label: "Home", href: "/" },
+          { label: "MBA Study Materials", href: "/subjects" },
+          ...(category
+            ? [{ label: category.category, href: `/subjects?term=${encodeURIComponent(category.category)}` }]
+            : []),
+          { label: subject },
+        ]}
+      />
 
       <div className="flex items-start justify-between gap-3">
         <div>

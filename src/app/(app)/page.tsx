@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookmarkIcon, Building2Icon, GraduationCapIcon, NewspaperIcon, RssIcon } from "lucide-react";
+import { BookmarkIcon, Building2Icon, CalendarClockIcon, ExternalLinkIcon, GraduationCapIcon, NewspaperIcon, RssIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { DashboardCard } from "@/components/dashboard-card";
 import { GreetingHeading } from "@/components/greeting-heading";
@@ -11,6 +11,7 @@ import {
   fetchNewsArticlesByCategory,
   fetchRecentEntries,
   fetchSubjects,
+  fetchUpcomingSessions,
   withDriveOnlySubjects,
 } from "@/lib/queries";
 import { entryTypeLabel, formatEntryDate } from "@/lib/types";
@@ -20,14 +21,16 @@ import { cn } from "@/lib/utils";
 export default async function BrowsePage() {
   const supabase = await createClient();
 
-  const [subjects, driveSubjectNames, categories, briefingEntries, newsCategories, recentEntries] = await Promise.all([
-    fetchSubjects(supabase),
-    fetchDriveSubjectNames().catch(() => null),
-    fetchMagazineArticlesByCategory(supabase),
-    fetchEntries(supabase, { excludeType: "study_notes" }),
-    fetchNewsArticlesByCategory(supabase),
-    fetchRecentEntries(supabase, 3),
-  ]);
+  const [subjects, driveSubjectNames, categories, briefingEntries, newsCategories, recentEntries, upcomingSessions] =
+    await Promise.all([
+      fetchSubjects(supabase),
+      fetchDriveSubjectNames().catch(() => null),
+      fetchMagazineArticlesByCategory(supabase),
+      fetchEntries(supabase, { excludeType: "study_notes" }),
+      fetchNewsArticlesByCategory(supabase),
+      fetchRecentEntries(supabase, 3),
+      fetchUpcomingSessions(supabase),
+    ]);
 
   const allSubjects = withDriveOnlySubjects(subjects, driveSubjectNames);
 
@@ -59,6 +62,53 @@ export default async function BrowsePage() {
           </Link>
         </div>
       </div>
+
+      {upcomingSessions.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Upcoming classes & pre-reads</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {upcomingSessions.map((session) => {
+              const isToday = session.eventDate === new Date().toISOString().slice(0, 10);
+              return (
+                <div key={`${session.eventDate}-${session.eventTitle}`} className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3.5">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <CalendarClockIcon className="size-3.5" />
+                    <span>{isToday ? "Today" : "Tomorrow"}</span>
+                    <span>·</span>
+                    <span>{session.eventTitle}</span>
+                  </div>
+                  {session.subject ? (
+                    <p className="text-sm font-medium text-foreground">
+                      {session.subject}
+                      {session.sessionLabel ? ` — ${session.sessionLabel}` : ""}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Couldn&apos;t match this event to a subject.</p>
+                  )}
+                  {session.files.length > 0 ? (
+                    <div className="flex flex-col gap-1">
+                      {session.files.map((file) => (
+                        <a
+                          key={file.id}
+                          href={file.webViewLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:underline"
+                        >
+                          <ExternalLinkIcon className="size-3 shrink-0" />
+                          <span className="truncate">{file.name}</span>
+                        </a>
+                      ))}
+                    </div>
+                  ) : session.subject ? (
+                    <p className="text-xs text-muted-foreground/70">No pre-read files found for this session.</p>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
 
       {recentEntries.length > 0 ? (
         <div className="flex flex-col gap-2">

@@ -249,3 +249,17 @@ export async function fetchDriveSubjectNames(): Promise<string[] | null> {
     return null;
   }
 }
+
+export interface PreReadSessionGroup {
+  sessionLabel: string;
+  files: DriveFileEntry[];
+}
+
+// Picks out the "Pre Reads/<session folder>" groups from a subject's full
+// file listing — the leaf segment (e.g. "Session 4 to 6") is what calendar
+// session references get matched against.
+export function extractPreReadSessionGroups(groups: DriveFileGroup[]): PreReadSessionGroup[] {
+  return groups
+    .filter((g) => g.folderName && /pre[\s-]?reads/i.test(g.folderName) && g.folderName.includes("/"))
+    .map((g) => ({ sessionLabel: g.folderName!.split("/").pop()!, files: g.files }));
+}

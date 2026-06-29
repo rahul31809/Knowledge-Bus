@@ -307,11 +307,27 @@ export interface MagazineArticle {
   isRead: boolean;
   webViewLink: string;
   issueLabel: string;
+  source: string;
 }
 
 export interface MagazineCategoryGroup {
   section: MagazineSection;
   articles: MagazineArticle[];
+}
+
+export interface UpcomingSessionFile {
+  id: string;
+  name: string;
+  mimeType: string;
+  webViewLink: string;
+}
+
+export interface UpcomingSession {
+  eventDate: string;
+  eventTitle: string;
+  subject: string | null;
+  sessionLabel: string | null;
+  files: UpcomingSessionFile[];
 }
 
 export const NEWS_SECTIONS = [

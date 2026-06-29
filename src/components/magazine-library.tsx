@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { ChevronRightIcon, ExternalLinkIcon } from "lucide-react";
 import { setArticleReadStatus } from "@/app/(app)/magazines/actions";
 import { cn } from "@/lib/utils";
@@ -53,7 +53,7 @@ function CategorySection({ group }: { group: MagazineCategoryGroup }) {
   const readCount = group.articles.filter((a) => a.isRead).length;
 
   return (
-    <details className="group/category rounded-lg border border-border bg-card">
+    <details name="magazine-category" className="group/category rounded-lg border border-border bg-card">
       <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold text-foreground [&::-webkit-details-marker]:hidden">
         <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground transition-transform group-open/category:rotate-90" />
         {group.section}
@@ -71,11 +71,62 @@ function CategorySection({ group }: { group: MagazineCategoryGroup }) {
 }
 
 export function MagazineLibrary({ categories }: { categories: MagazineCategoryGroup[] }) {
+  const [selectedSource, setSelectedSource] = useState<string | null>(null);
+
+  const sources = useMemo(() => {
+    const set = new Set<string>();
+    for (const group of categories) {
+      for (const article of group.articles) set.add(article.source);
+    }
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [categories]);
+
+  const filteredCategories = useMemo(() => {
+    if (!selectedSource) return categories;
+    return categories
+      .map((group) => ({ ...group, articles: group.articles.filter((a) => a.source === selectedSource) }))
+      .filter((group) => group.articles.length > 0);
+  }, [categories, selectedSource]);
+
   return (
-    <div className="flex flex-col gap-3">
-      {categories.map((group) => (
-        <CategorySection key={group.section} group={group} />
-      ))}
+    <div className="flex flex-col gap-4">
+      {sources.length > 1 ? (
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => setSelectedSource(null)}
+            className={cn(
+              "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+              selectedSource === null
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+            )}
+          >
+            All
+          </button>
+          {sources.map((source) => (
+            <button
+              key={source}
+              type="button"
+              onClick={() => setSelectedSource(source)}
+              className={cn(
+                "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                selectedSource === source
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+              )}
+            >
+              {source}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="flex flex-col gap-3">
+        {filteredCategories.map((group) => (
+          <CategorySection key={group.section} group={group} />
+        ))}
+      </div>
     </div>
   );
 }

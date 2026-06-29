@@ -17,6 +17,8 @@ import {
   type NewsCategoryGroup,
   type NewsSection,
   type SubjectProfile,
+  type UpcomingSession,
+  type UpcomingSessionFile,
 } from "./types";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
@@ -260,6 +262,7 @@ export async function fetchMagazineArticlesByCategory(supabase: SupabaseServerCl
         isRead: row.is_read,
         webViewLink: issue.web_view_link,
         issueLabel: `${issue.source} — ${issue.file_name.replace(/\.pdf$/i, "")}`,
+        source: issue.source,
       },
       modifiedTime: issue.drive_modified_time ?? "",
       orderIndex: row.order_index,
@@ -313,6 +316,7 @@ export async function searchMagazineArticles(supabase: SupabaseServerClient, que
         isRead: row.is_read,
         webViewLink: issue.web_view_link,
         issueLabel: `${issue.source} — ${issue.file_name.replace(/\.pdf$/i, "")}`,
+        source: issue.source,
       };
     });
 }
@@ -555,6 +559,37 @@ export async function fetchSavedNewsArticles(supabase: SupabaseServerClient): Pr
 
   if (error) return [];
   return (data ?? []).map((row) => mapNewsArticleRow(row as NewsArticleRow));
+}
+
+interface UpcomingSessionRow {
+  event_date: string;
+  event_title: string;
+  subject: string | null;
+  session_label: string | null;
+  files: UpcomingSessionFile[];
+}
+
+// Reads whatever the daily calendar-matching cron last stored (today or
+// later) — never anything from a past date, which would just be clutter.
+export async function fetchUpcomingSessions(supabase: SupabaseServerClient): Promise<UpcomingSession[]> {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from("upcoming_sessions")
+    .select("event_date, event_title, subject, session_label, files")
+    .gte("event_date", today)
+    .order("event_date", { ascending: true });
+
+  if (error) return [];
+  return (data ?? []).map((row) => {
+    const r = row as UpcomingSessionRow;
+    return {
+      eventDate: r.event_date,
+      eventTitle: r.event_title,
+      subject: r.subject,
+      sessionLabel: r.session_label,
+      files: r.files ?? [],
+    };
+  });
 }
 
 export async function searchNewsArticles(supabase: SupabaseServerClient, query: string): Promise<NewsArticle[]> {
