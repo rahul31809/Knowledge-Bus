@@ -10,6 +10,11 @@ import { fetchDriveFileTagsForSubject, fetchSessions, fetchSubjectProfile } from
 import { UNSORTED_LABEL, type SubjectProfile } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
 
+// Drive file listings must never be served stale — newly added files should
+// show up on the next visit, not after some cache window expires.
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
 function plural(count: number, word: string) {
   return `${count} ${word}${count === 1 ? "" : "s"}`;
 }
@@ -41,7 +46,7 @@ export default async function SubjectPage({ params }: { params: Promise<{ subjec
   if (sessions.length === 0 && drive.status !== "found") notFound();
 
   const driveFiles = drive.status === "found" ? drive.files : null;
-  const tagMap = new Map(driveTags.map((t) => [t.file_id, t.tags]));
+  const fileDataMap = new Map(driveTags.map((t) => [t.file_id, { tags: t.tags, summary: t.ai_summary }]));
 
   const sections = PROFILE_SECTIONS.map((section) => ({ ...section, value: profile?.[section.key] as string | null }))
     .filter((section) => section.value);
@@ -86,7 +91,7 @@ export default async function SubjectPage({ params }: { params: Promise<{ subjec
         </Link>
       ) : null}
 
-      {canEditInfo ? <SubjectDriveFiles groups={driveFiles} tagMap={tagMap} /> : null}
+      {canEditInfo ? <SubjectDriveFiles groups={driveFiles} subject={subject} fileDataMap={fileDataMap} /> : null}
 
       {sessions.length > 0 ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

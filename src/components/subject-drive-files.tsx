@@ -1,44 +1,10 @@
-import { ChevronRightIcon, ExternalLinkIcon, FileTextIcon, FolderIcon } from "lucide-react";
+import { ChevronRightIcon, FolderIcon, FolderOpenIcon } from "lucide-react";
+import { DriveFileLink } from "@/components/drive-file-link";
 import type { DriveFileEntry, DriveFileGroup } from "@/lib/drive-sync/client";
 
-function TagChip({ tag }: { tag: string }) {
-  return (
-    <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-      {tag}
-    </span>
-  );
-}
-
-function FileLink({
-  file,
-  tags,
-}: {
-  file: DriveFileEntry;
+export interface DriveFileData {
   tags: string[];
-}) {
-  return (
-    <a
-      href={file.webViewLink}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group flex flex-col gap-1 rounded-md px-2 py-2 transition-colors hover:bg-accent"
-    >
-      <div className="flex items-center gap-2">
-        <FileTextIcon className="size-4 shrink-0 text-muted-foreground" />
-        <span className="truncate text-sm text-muted-foreground group-hover:text-foreground group-hover:underline">
-          {file.name}
-        </span>
-        <ExternalLinkIcon className="ml-auto size-3.5 shrink-0 text-muted-foreground/50 group-hover:text-muted-foreground" />
-      </div>
-      {tags.length > 0 && (
-        <div className="flex flex-wrap gap-1 pl-6">
-          {tags.map((tag) => (
-            <TagChip key={tag} tag={tag} />
-          ))}
-        </div>
-      )}
-    </a>
-  );
+  summary: string | null;
 }
 
 interface FolderNode {
@@ -71,26 +37,63 @@ function buildTree(groups: DriveFileGroup[]): FolderNode {
   return root;
 }
 
+function sortedFiles(files: DriveFileEntry[]): DriveFileEntry[] {
+  return [...files].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function sortedChildren(node: FolderNode): FolderNode[] {
+  return [...node.children.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function countFilesDeep(node: FolderNode): number {
+  let count = node.files.length;
+  for (const child of node.children.values()) count += countFilesDeep(child);
+  return count;
+}
+
+// Indentation is depth-based padding only, not stacked border lines — nesting
+// several folders deep with each level adding its own border looks busy and
+// cramped. A single consistent step per level reads cleaner at any depth.
+const INDENT_STEP_PX = 20;
+
 function FolderSection({
   node,
-  tagMap,
+  subject,
+  fileDataMap,
+  depth,
 }: {
   node: FolderNode;
-  tagMap: Map<string, string[]>;
+  subject: string;
+  fileDataMap: Map<string, DriveFileData>;
+  depth: number;
 }) {
   return (
-    <details open className="group/folder">
-      <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-foreground hover:bg-accent [&::-webkit-details-marker]:hidden">
+    <details className="group/folder">
+      <summary
+        style={{ paddingLeft: depth * INDENT_STEP_PX }}
+        className="flex cursor-pointer list-none items-center gap-2 rounded-md py-2 pr-2 text-sm font-medium text-foreground hover:bg-accent [&::-webkit-details-marker]:hidden"
+      >
         <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground transition-transform group-open/folder:rotate-90" />
-        <FolderIcon className="size-4 shrink-0 text-muted-foreground" />
-        {node.name}
+        <FolderIcon className="size-4 shrink-0 text-muted-foreground group-open/folder:hidden" />
+        <FolderOpenIcon className="hidden size-4 shrink-0 text-muted-foreground group-open/folder:block" />
+        <span className="truncate">{node.name}</span>
+        <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-normal text-muted-foreground">
+          {countFilesDeep(node)}
+        </span>
       </summary>
-      <div className="flex flex-col gap-1 border-l border-border pl-4 ml-3.5">
-        {node.files.map((file) => (
-          <FileLink key={file.id} file={file} tags={tagMap.get(file.id) ?? []} />
+      <div className="flex flex-col gap-0.5">
+        {sortedFiles(node.files).map((file) => (
+          <DriveFileLink
+            key={file.id}
+            file={file}
+            subject={subject}
+            tags={fileDataMap.get(file.id)?.tags ?? []}
+            initialSummary={fileDataMap.get(file.id)?.summary ?? null}
+            indentPx={(depth + 1) * INDENT_STEP_PX}
+          />
         ))}
-        {[...node.children.values()].map((child) => (
-          <FolderSection key={child.name} node={child} tagMap={tagMap} />
+        {sortedChildren(node).map((child) => (
+          <FolderSection key={child.name} node={child} subject={subject} fileDataMap={fileDataMap} depth={depth + 1} />
         ))}
       </div>
     </details>
@@ -99,25 +102,39 @@ function FolderSection({
 
 export function SubjectDriveFiles({
   groups,
-  tagMap,
+  subject,
+  fileDataMap,
 }: {
   groups: DriveFileGroup[] | null;
-  tagMap: Map<string, string[]>;
+  subject: string;
+  fileDataMap: Map<string, DriveFileData>;
 }) {
   if (!groups || groups.every((g) => g.files.length === 0)) return null;
 
   const tree = buildTree(groups);
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
-      <h2 className="px-2 text-sm font-semibold text-foreground">Files in Drive</h2>
-      <p className="px-2 pb-2 text-xs text-muted-foreground">Opens in Google Drive. Tags generated by AI.</p>
-      <div className="flex flex-col gap-1">
-        {tree.files.map((file) => (
-          <FileLink key={file.id} file={file} tags={tagMap.get(file.id) ?? []} />
+    <div className="overflow-hidden rounded-lg border border-border bg-card">
+      <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+        <FolderIcon className="size-4 text-muted-foreground" />
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">Files in Drive</h2>
+          <p className="text-xs text-muted-foreground">Opens in Google Drive. Tags and summaries generated by AI.</p>
+        </div>
+      </div>
+      <div className="flex flex-col gap-0.5 p-2">
+        {sortedFiles(tree.files).map((file) => (
+          <DriveFileLink
+            key={file.id}
+            file={file}
+            subject={subject}
+            tags={fileDataMap.get(file.id)?.tags ?? []}
+            initialSummary={fileDataMap.get(file.id)?.summary ?? null}
+            indentPx={0}
+          />
         ))}
-        {[...tree.children.values()].map((child) => (
-          <FolderSection key={child.name} node={child} tagMap={tagMap} />
+        {sortedChildren(tree).map((child) => (
+          <FolderSection key={child.name} node={child} subject={subject} fileDataMap={fileDataMap} depth={0} />
         ))}
       </div>
     </div>
