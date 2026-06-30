@@ -1,14 +1,9 @@
-import { google, gmail_v1, calendar_v3 } from "googleapis";
+import { google, gmail_v1 } from "googleapis";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-// Calendar read access is requested in the same consent screen as Gmail —
-// one refresh token then covers both APIs. Anyone who connected before this
-// scope was added needs to reconnect once for Calendar access to apply;
-// Google doesn't retroactively widen an already-issued refresh token's scope.
 const GMAIL_SCOPES = [
   "https://www.googleapis.com/auth/gmail.readonly",
   "https://www.googleapis.com/auth/userinfo.email",
-  "https://www.googleapis.com/auth/calendar.readonly",
 ];
 
 function getOAuth2Client(redirectUri: string) {
@@ -114,45 +109,4 @@ export async function getMessageHtml(refreshToken: string, messageId: string): P
   const payload = res.data.payload;
   if (!payload) return null;
   return findHtmlPart(payload);
-}
-
-function getCalendarClient(refreshToken: string): calendar_v3.Calendar {
-  const oauth2Client = getOAuth2Client("");
-  oauth2Client.setCredentials({ refresh_token: refreshToken });
-  return google.calendar({ version: "v3", auth: oauth2Client });
-}
-
-export interface CalendarEventSummary {
-  id: string;
-  title: string;
-  description: string | null;
-  start: string | null;
-  end: string | null;
-}
-
-// Lists events on the user's primary calendar starting from now through
-// `daysAhead` days out. Used to find tomorrow's class sessions.
-export async function listUpcomingEvents(refreshToken: string, daysAhead: number): Promise<CalendarEventSummary[]> {
-  const calendar = getCalendarClient(refreshToken);
-  const timeMin = new Date();
-  const timeMax = new Date(timeMin.getTime() + daysAhead * 24 * 60 * 60 * 1000);
-
-  const res = await calendar.events.list({
-    calendarId: "primary",
-    timeMin: timeMin.toISOString(),
-    timeMax: timeMax.toISOString(),
-    singleEvents: true,
-    orderBy: "startTime",
-    maxResults: 50,
-  });
-
-  return (res.data.items ?? [])
-    .filter((event): event is calendar_v3.Schema$Event & { id: string } => Boolean(event.id))
-    .map((event) => ({
-      id: event.id,
-      title: event.summary ?? "(untitled event)",
-      description: event.description ?? null,
-      start: event.start?.dateTime ?? event.start?.date ?? null,
-      end: event.end?.dateTime ?? event.end?.date ?? null,
-    }));
 }

@@ -1,24 +1,14 @@
 import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient as createSessionClient } from "@/lib/supabase/server";
-import { getStoredGmailToken, listUpcomingEvents } from "@/lib/gmail/client";
 import { extractPreReadSessionGroups, fetchDriveSubjectNames, fetchSubjectDriveResources } from "@/lib/drive-sync/client";
+import { fetchWeeklySessionRows } from "@/lib/drive-sync/weekly-sessions";
 import { matchSessionFolder, matchSubjectName, parseSessionEventTitle } from "@/lib/calendar/session-matcher";
 
 export const maxDuration = 120;
 
-const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
-
-function dateStringIST(date: Date): string {
-  return new Date(date.getTime() + IST_OFFSET_MS).toISOString().slice(0, 10);
-}
-
-function tomorrowIST(): string {
-  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  return dateStringIST(tomorrow);
-}
-
 interface MatchResult {
+  eventDate: string;
   eventTitle: string;
   subject: string | null;
   sessionLabel: string | null;
@@ -44,40 +34,30 @@ export async function GET(request: Request) {
   }
   const supabase = createSupabaseClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
 
-  const token = await getStoredGmailToken(supabase);
-  if (!token) {
-    return NextResponse.json({ ok: false, error: "Google account is not connected — connect it from the News page." });
-  }
-
-  const target = tomorrowIST();
-
-  let events;
-  try {
-    events = await listUpcomingEvents(token.refresh_token, 2);
-  } catch (err) {
-    const reason = err instanceof Error ? err.message : "unknown_error";
+  const rows = await fetchWeeklySessionRows();
+  if (rows === null) {
     return NextResponse.json({
       ok: false,
-      error: `Failed to read calendar — ${reason}. If this is a scope error, reconnect Google from the News page so Calendar access is granted.`,
+      error: "Couldn't find weekly-sessions.xlsx in the SPJIMR Drive folder — make sure the claude.ai routine has saved it there.",
     });
   }
 
-  const sessionEvents = events.filter((e) => e.start && dateStringIST(new Date(e.start)) === target && /session/i.test(e.title));
+  const sessionRows = rows.filter((r) => /session/i.test(r.title));
 
   const results: MatchResult[] = [];
   let candidateSubjects: string[] | null = null;
 
-  for (const event of sessionEvents) {
-    const parsed = parseSessionEventTitle(event.title);
+  for (const row of sessionRows) {
+    const parsed = parseSessionEventTitle(row.title);
     if (!parsed) {
-      results.push({ eventTitle: event.title, subject: null, sessionLabel: null, files: [] });
+      results.push({ eventDate: row.date, eventTitle: row.title, subject: null, sessionLabel: null, files: [] });
       continue;
     }
 
     candidateSubjects ??= (await fetchDriveSubjectNames()) ?? [];
     const subject = await matchSubjectName(parsed.subjectCode, candidateSubjects);
     if (!subject) {
-      results.push({ eventTitle: event.title, subject: null, sessionLabel: null, files: [] });
+      results.push({ eventDate: row.date, eventTitle: row.title, subject: null, sessionLabel: null, files: [] });
       continue;
     }
 
@@ -86,14 +66,17 @@ export async function GET(request: Request) {
     const sessionLabel = await matchSessionFolder(parsed.sessionRef, sessionGroups.map((g) => g.sessionLabel));
     const files = sessionGroups.find((g) => g.sessionLabel === sessionLabel)?.files ?? [];
 
-    results.push({ eventTitle: event.title, subject, sessionLabel, files });
+    results.push({ eventDate: row.date, eventTitle: row.title, subject, sessionLabel, files });
   }
 
-  await supabase.from("upcoming_sessions").delete().eq("event_date", target);
+  // The Excel represents the full current week each time it's regenerated —
+  // a full replace keeps the table from accumulating stale rows from
+  // sessions that got rescheduled or removed.
+  await supabase.from("upcoming_sessions").delete().neq("id", "00000000-0000-0000-0000-000000000000");
   if (results.length > 0) {
     const { error } = await supabase.from("upcoming_sessions").insert(
       results.map((r) => ({
-        event_date: target,
+        event_date: r.eventDate,
         event_title: r.eventTitle,
         subject: r.subject,
         session_label: r.sessionLabel,
@@ -103,5 +86,5 @@ export async function GET(request: Request) {
     if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, date: target, matched: results });
+  return NextResponse.json({ ok: true, matched: results });
 }

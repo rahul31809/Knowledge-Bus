@@ -68,12 +68,19 @@ export default async function BrowsePage() {
           <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Upcoming classes & pre-reads</p>
           <div className="grid gap-3 sm:grid-cols-2">
             {upcomingSessions.map((session) => {
-              const isToday = session.eventDate === new Date().toISOString().slice(0, 10);
+              const today = new Date().toISOString().slice(0, 10);
+              const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+              const dayLabel =
+                session.eventDate === today
+                  ? "Today"
+                  : session.eventDate === tomorrow
+                    ? "Tomorrow"
+                    : new Date(session.eventDate).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
               return (
                 <div key={`${session.eventDate}-${session.eventTitle}`} className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3.5">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <CalendarClockIcon className="size-3.5" />
-                    <span>{isToday ? "Today" : "Tomorrow"}</span>
+                    <span>{dayLabel}</span>
                     <span>·</span>
                     <span>{session.eventTitle}</span>
                   </div>

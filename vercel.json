@@ -21,7 +21,7 @@
       "schedule": "15 5 * * *"
     },
     {
-      "path": "/api/calendar/match-tomorrow",
+      "path": "/api/calendar/match-sessions",
       "schedule": "30 2 * * *"
     }
   ]

@@ -6,18 +6,29 @@ export interface ParsedSessionEvent {
   sessionRef: string;
 }
 
-// Calendar titles follow "<Subject Code> - DIV <X> - Session <N[& M]>", e.g.
-// "ET - DIV C - Session 5 & 6". The division segment is noise for matching —
-// only the code (first segment) and the session reference matter.
+// Calendar titles roughly follow "<Subject> - DIV <X> - Session <N[& M]>",
+// e.g. "ET - DIV C - Session 5 & 6" — but real data shows inconsistent
+// delimiters (dashes, underscores, mixed spacing) and an occasional missing
+// DIV segment. Extracting the session reference and the DIV segment via
+// regex (rather than splitting on a fixed delimiter) is robust to all of
+// that; whatever text remains is the subject code/name, fuzzy-matched by
+// Gemini downstream anyway so leftover noise there is harmless.
 export function parseSessionEventTitle(title: string): ParsedSessionEvent | null {
-  const segments = title.split("-").map((s) => s.trim()).filter(Boolean);
-  const sessionSegment = segments.find((s) => /session/i.test(s));
-  if (!sessionSegment) return null;
+  // Underscores count as word characters in regex, which silently breaks
+  // \b boundaries around "DIV" in titles like "MCOM_DIV C_Session 29 & 30"
+  // — normalizing to spaces first keeps boundary matching reliable.
+  const normalized = title.replace(/_/g, " ");
 
-  const subjectCode = segments.find((s) => !/^div\b/i.test(s) && !/session/i.test(s));
+  const sessionMatch = normalized.match(/session\s*\d+(?:\s*&\s*\d+)*/i);
+  if (!sessionMatch) return null;
+  const sessionRef = sessionMatch[0];
+
+  const withoutSession = normalized.slice(0, sessionMatch.index) + normalized.slice(sessionMatch.index! + sessionRef.length);
+  const withoutDiv = withoutSession.replace(/\bdiv\b[\s-]*\w*/gi, " ");
+  const subjectCode = withoutDiv.replace(/^[\s\-:]+|[\s\-:]+$/g, "").trim();
   if (!subjectCode) return null;
 
-  return { rawTitle: title, subjectCode, sessionRef: sessionSegment };
+  return { rawTitle: title, subjectCode, sessionRef };
 }
 
 function getAi(): GoogleGenAI {
