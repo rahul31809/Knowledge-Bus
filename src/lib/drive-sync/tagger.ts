@@ -16,18 +16,18 @@ async function exportGoogleWorkspaceAsText(drive: drive_v3.Drive, fileId: string
   }
 }
 
-// pdf-parse's bundled pdfjs-dist has multiple serverless incompatibilities
-// (DOMMatrix global missing, fake-worker module not bundled by Vercel's file
-// tracing). Fall back to filename-only tagging on any extraction failure
-// rather than crashing the file's tagging run.
+// pdf-parse's bundled pdfjs-dist needs @napi-rs/canvas for its DOMMatrix
+// polyfill, and Vercel's file tracer doesn't pick up that dynamic require
+// even when externalized — text extraction silently returns empty on
+// every PDF in production. unpdf wraps a serverless build of pdfjs-dist
+// that skips the canvas-dependent code paths entirely for plain text
+// extraction, so it has no such dependency to fail to trace.
 async function extractPdfText(drive: drive_v3.Drive, fileId: string, maxChars: number): Promise<string> {
   try {
     const res = await drive.files.get({ fileId, alt: "media" }, { responseType: "arraybuffer" });
-    const { PDFParse } = await import("pdf-parse");
-    const parser = new PDFParse({ data: new Uint8Array(res.data as ArrayBuffer) });
-    const result = await parser.getText();
-    await parser.destroy();
-    return result.text.slice(0, maxChars);
+    const { extractText } = await import("unpdf");
+    const { text } = await extractText(new Uint8Array(res.data as ArrayBuffer), { mergePages: true });
+    return text.slice(0, maxChars);
   } catch {
     return "";
   }

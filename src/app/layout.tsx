@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -21,6 +21,15 @@ const sourceSerif = Source_Serif_4({
 export const metadata: Metadata = {
   title: "Knowledge Base",
   description: "Rahul's searchable knowledge base of study notes, briefings and scans.",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Knowledge Base",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0f1115",
 };
 
 export default function RootLayout({
