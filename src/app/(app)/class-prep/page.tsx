@@ -18,6 +18,22 @@ function formatDateHeading(dateStr: string): string {
   });
 }
 
+// Extracts the start time (e.g. "9:00 AM" from "9:00 AM - 11:40 AM") as
+// minutes-since-midnight for chronological sorting — a plain string sort
+// would put "9:00 AM" after "12:00 PM" and "2:30 PM" since "9" > "1" > "2"
+// as the first character. Sessions with no parseable time sort last within
+// their date rather than disrupting the rest of the order.
+function parseStartMinutes(time: string | null): number {
+  const match = time?.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  if (!match) return Number.MAX_SAFE_INTEGER;
+  let hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  const period = match[3].toUpperCase();
+  if (period === "PM" && hours !== 12) hours += 12;
+  if (period === "AM" && hours === 12) hours = 0;
+  return hours * 60 + minutes;
+}
+
 function groupByDate(sessions: UpcomingSession[]): { date: string; sessions: UpcomingSession[] }[] {
   const map = new Map<string, UpcomingSession[]>();
   for (const session of sessions) {
@@ -27,7 +43,10 @@ function groupByDate(sessions: UpcomingSession[]): { date: string; sessions: Upc
   }
   return [...map.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, sessions]) => ({ date, sessions }));
+    .map(([date, sessions]) => ({
+      date,
+      sessions: [...sessions].sort((a, b) => parseStartMinutes(a.eventTime) - parseStartMinutes(b.eventTime)),
+    }));
 }
 
 interface FileData {
