@@ -45,10 +45,17 @@ function DifficultyBadge({ difficulty }: { difficulty: QuizQuestion["difficulty"
 
 type Stage = "setup" | "taking" | "results";
 
-export function QuizApp({ subjects }: { subjects: string[] }) {
+interface CategoryGroup {
+  category: string;
+  subjects: string[];
+}
+
+export function QuizApp({ categories }: { categories: CategoryGroup[] }) {
   const [stage, setStage] = useState<Stage>("setup");
 
+  const [term, setTerm] = useState("");
   const [subject, setSubject] = useState("");
+  const [confirmed, setConfirmed] = useState(false);
   const [sources, setSources] = useState<SourceFile[]>([]);
   const [sourcesLoading, setSourcesLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -59,15 +66,29 @@ export function QuizApp({ subjects }: { subjects: string[] }) {
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [answers, setAnswers] = useState<Map<string, number>>(new Map());
 
-  async function handleSubjectChange(next: string) {
-    setSubject(next);
+  const subjectsInTerm = categories.find((c) => c.category === term)?.subjects ?? [];
+
+  function handleTermChange(next: string) {
+    setTerm(next);
+    setSubject("");
+    setConfirmed(false);
     setSources([]);
     setSelectedIds(new Set());
+  }
+
+  function handleSubjectChange(next: string) {
+    setSubject(next);
+    setConfirmed(false);
+    setSources([]);
+    setSelectedIds(new Set());
+  }
+
+  async function handleConfirm() {
+    setConfirmed(true);
     setError(null);
-    if (!next) return;
     setSourcesLoading(true);
     try {
-      const res = await fetch(`/api/quiz/sources?subject=${encodeURIComponent(next)}`);
+      const res = await fetch(`/api/quiz/sources?subject=${encodeURIComponent(subject)}`);
       const data = (await res.json()) as { files?: SourceFile[]; error?: string };
       if (!res.ok) throw new Error(data.error ?? "Failed to load files");
       setSources(data.files ?? []);
@@ -85,6 +106,20 @@ export function QuizApp({ subjects }: { subjects: string[] }) {
       else next.add(id);
       return next;
     });
+  }
+
+  function selectAll() {
+    setSelectedIds(new Set(sources.map((f) => f.id)));
+  }
+
+  function deselectAll() {
+    setSelectedIds(new Set());
+  }
+
+  function handleCountChange(level: keyof DifficultyCounts, raw: string) {
+    const digitsOnly = raw.replace(/\D/g, "").replace(/^0+(?=\d)/, "");
+    const num = digitsOnly === "" ? 0 : Math.min(20, Number(digitsOnly));
+    setCounts((prev) => ({ ...prev, [level]: num }));
   }
 
   const totalQuestions = counts.easy + counts.medium + counts.hard;
@@ -139,35 +174,73 @@ export function QuizApp({ subjects }: { subjects: string[] }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-foreground" htmlFor="quiz-subject">
-          Subject
-        </label>
-        <select
-          id="quiz-subject"
-          value={subject}
-          onChange={(e) => handleSubjectChange(e.target.value)}
-          className="w-full max-w-sm rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground"
-        >
-          <option value="">Choose a subject…</option>
-          {subjects.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-foreground" htmlFor="quiz-term">
+            Term
+          </label>
+          <select
+            id="quiz-term"
+            value={term}
+            onChange={(e) => handleTermChange(e.target.value)}
+            className="w-full max-w-xs rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground"
+          >
+            <option value="">Choose a term…</option>
+            {categories.map((c) => (
+              <option key={c.category} value={c.category}>
+                {c.category}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-foreground" htmlFor="quiz-subject">
+            Subject
+          </label>
+          <select
+            id="quiz-subject"
+            value={subject}
+            disabled={!term}
+            onChange={(e) => handleSubjectChange(e.target.value)}
+            className="w-full max-w-xs rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground disabled:opacity-50"
+          >
+            <option value="">Choose a subject…</option>
+            {subjectsInTerm.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {subject && !confirmed ? (
+          <Button onClick={handleConfirm} size="sm">
+            OK
+          </Button>
+        ) : null}
       </div>
 
-      {sourcesLoading ? (
+      {confirmed && sourcesLoading ? (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2Icon className="size-4 animate-spin" />
           Looking for session PPTs…
         </p>
-      ) : subject && sources.length === 0 ? (
+      ) : confirmed && sources.length === 0 ? (
         <p className="text-sm text-muted-foreground">No PPTs or session PDFs found in this subject&apos;s Drive folder.</p>
-      ) : sources.length > 0 ? (
+      ) : confirmed && sources.length > 0 ? (
         <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-foreground">Session PPTs ({selectedIds.size} selected)</span>
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-foreground">Session PPTs ({selectedIds.size} selected)</span>
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={selectAll} className="text-xs text-muted-foreground hover:text-foreground hover:underline">
+                Select all
+              </button>
+              <button type="button" onClick={deselectAll} className="text-xs text-muted-foreground hover:text-foreground hover:underline">
+                Deselect all
+              </button>
+            </div>
+          </div>
           <div className="flex flex-col gap-1 rounded-lg border border-border bg-card p-2">
             {sources.map((file) => (
               <label
@@ -192,7 +265,7 @@ export function QuizApp({ subjects }: { subjects: string[] }) {
         </div>
       ) : null}
 
-      {sources.length > 0 ? (
+      {confirmed && sources.length > 0 ? (
         <div className="flex flex-col gap-1.5">
           <span className="text-sm font-medium text-foreground">Question mix ({totalQuestions} total)</span>
           <div className="flex flex-wrap gap-3">
@@ -200,11 +273,10 @@ export function QuizApp({ subjects }: { subjects: string[] }) {
               <div key={level} className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
                 <DifficultyBadge difficulty={level} />
                 <input
-                  type="number"
-                  min={0}
-                  max={20}
+                  type="text"
+                  inputMode="numeric"
                   value={counts[level]}
-                  onChange={(e) => setCounts((prev) => ({ ...prev, [level]: Math.max(0, Number(e.target.value) || 0) }))}
+                  onChange={(e) => handleCountChange(level, e.target.value)}
                   className="w-14 rounded-md border border-input bg-background px-2 py-1 text-sm text-foreground"
                 />
               </div>
@@ -215,7 +287,7 @@ export function QuizApp({ subjects }: { subjects: string[] }) {
 
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-      {sources.length > 0 ? (
+      {confirmed && sources.length > 0 ? (
         <Button onClick={handleGenerate} disabled={!canGenerate} className="w-fit">
           {generating ? <Loader2Icon className="size-4 animate-spin" /> : null}
           {generating ? "Generating…" : "Generate Quiz"}

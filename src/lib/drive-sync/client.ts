@@ -305,6 +305,15 @@ function parsePptSessionLabel(filename: string): string | null {
 
 // Finds every file under any "PPTs"-named folder, at any depth, across a
 // subject's full file listing.
+// Sorts by the first session number found ("Session 14&15" -> 14), so
+// "Session 10" lands after "Session 9" rather than between "Session 1" and
+// "Session 2" the way a plain alphabetical sort would put it. Files with no
+// parseable session number sort last.
+function firstSessionNumber(label: string | null): number {
+  const match = label?.match(/\d+/);
+  return match ? Number(match[0]) : Number.MAX_SAFE_INTEGER;
+}
+
 export function extractQuizSourceFiles(groups: DriveFileGroup[]): QuizSourceFile[] {
   return groups
     .filter((g) => g.folderName && g.folderName.split("/").some((s) => /^ppts?$/i.test(s)))
@@ -316,5 +325,6 @@ export function extractQuizSourceFiles(groups: DriveFileGroup[]): QuizSourceFile
       mimeType: f.mimeType,
       webViewLink: f.webViewLink,
       sessionLabel: parsePptSessionLabel(f.name),
-    }));
+    }))
+    .sort((a, b) => firstSessionNumber(a.sessionLabel) - firstSessionNumber(b.sessionLabel));
 }
