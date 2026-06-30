@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookmarkIcon, Building2Icon, CalendarClockIcon, ExternalLinkIcon, GraduationCapIcon, NewspaperIcon, RssIcon } from "lucide-react";
+import { BookmarkIcon, Building2Icon, CalendarCheckIcon, GraduationCapIcon, NewspaperIcon, RssIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { DashboardCard } from "@/components/dashboard-card";
 import { GreetingHeading } from "@/components/greeting-heading";
@@ -62,60 +62,6 @@ export default async function BrowsePage() {
           </Link>
         </div>
       </div>
-
-      {upcomingSessions.length > 0 ? (
-        <div className="flex flex-col gap-2">
-          <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Upcoming classes & pre-reads</p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {upcomingSessions.map((session) => {
-              const today = new Date().toISOString().slice(0, 10);
-              const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-              const dayLabel =
-                session.eventDate === today
-                  ? "Today"
-                  : session.eventDate === tomorrow
-                    ? "Tomorrow"
-                    : new Date(session.eventDate).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
-              return (
-                <div key={`${session.eventDate}-${session.eventTitle}`} className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3.5">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <CalendarClockIcon className="size-3.5" />
-                    <span>{dayLabel}</span>
-                    <span>·</span>
-                    <span>{session.eventTitle}</span>
-                  </div>
-                  {session.subject ? (
-                    <p className="text-sm font-medium text-foreground">
-                      {session.subject}
-                      {session.sessionLabel ? ` — ${session.sessionLabel}` : ""}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Couldn&apos;t match this event to a subject.</p>
-                  )}
-                  {session.files.length > 0 ? (
-                    <div className="flex flex-col gap-1">
-                      {session.files.map((file) => (
-                        <a
-                          key={file.id}
-                          href={file.webViewLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:underline"
-                        >
-                          <ExternalLinkIcon className="size-3 shrink-0" />
-                          <span className="truncate">{file.name}</span>
-                        </a>
-                      ))}
-                    </div>
-                  ) : session.subject ? (
-                    <p className="text-xs text-muted-foreground/70">No pre-read files found for this session.</p>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ) : null}
 
       {recentEntries.length > 0 ? (
         <div className="flex flex-col gap-2">
@@ -199,6 +145,17 @@ export default async function BrowsePage() {
           meta={`${briefingEntries.length} saved`}
           className="animate-fade-in-up"
           style={{ animationDelay: "240ms" }}
+        />
+
+        <DashboardCard
+          href="/class-prep"
+          icon={CalendarCheckIcon}
+          accent="rose"
+          title="Class Prep"
+          description="This week's sessions, synced from your calendar, with linked pre-reads"
+          meta={upcomingSessions.length > 0 ? `${upcomingSessions.length} session${upcomingSessions.length === 1 ? "" : "s"} this week` : "No sessions synced yet"}
+          className="animate-fade-in-up"
+          style={{ animationDelay: "300ms" }}
         />
       </div>
     </div>

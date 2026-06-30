@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   BookmarkIcon,
   Building2Icon,
+  CalendarCheckIcon,
   FilePlusIcon,
   GraduationCapIcon,
   NewspaperIcon,
@@ -24,6 +25,7 @@ import { INDUSTRY_TAXONOMY } from "@/lib/industry-taxonomy";
 const SECTIONS = [
   { label: "Home", href: "/", icon: SearchIcon },
   { label: "Subjects", href: "/subjects", icon: GraduationCapIcon },
+  { label: "Class Prep", href: "/class-prep", icon: CalendarCheckIcon },
   { label: "Industries", href: "/industries", icon: Building2Icon },
   { label: "Articles (Magazines)", href: "/magazines", icon: NewspaperIcon },
   { label: "Current News", href: "/news", icon: RssIcon },
