@@ -9,6 +9,7 @@ const ACCENT_CLASSES = {
   amber: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
   indigo: "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400",
   rose: "bg-rose-500/15 text-rose-600 dark:text-rose-400",
+  cyan: "bg-cyan-500/15 text-cyan-600 dark:text-cyan-400",
 } as const;
 
 interface DashboardCardProps {

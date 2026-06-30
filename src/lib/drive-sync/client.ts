@@ -280,3 +280,41 @@ export function extractPreReadSessionGroups(groups: DriveFileGroup[]): PreReadSe
 
   return [...bySession.entries()].map(([sessionLabel, files]) => ({ sessionLabel, files }));
 }
+
+const QUIZ_SOURCE_MIMES = new Set([
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "application/vnd.google-apps.presentation",
+]);
+
+export interface QuizSourceFile {
+  id: string;
+  name: string;
+  mimeType: string;
+  webViewLink: string;
+  sessionLabel: string | null;
+}
+
+// PPTs filenames carry their own session range ("Session 11&12_Budgeting.pptx",
+// "Session 1 to 4.pdf") rather than living in per-session subfolders the way
+// Pre Reads do — so the label comes from the filename, not the folder tree.
+function parsePptSessionLabel(filename: string): string | null {
+  const match = filename.match(/session\s*\d+(?:\s*(?:to|&|and|-)\s*\d+)*/i);
+  return match ? match[0].replace(/^session/i, "Session") : null;
+}
+
+// Finds every file under any "PPTs"-named folder, at any depth, across a
+// subject's full file listing.
+export function extractQuizSourceFiles(groups: DriveFileGroup[]): QuizSourceFile[] {
+  return groups
+    .filter((g) => g.folderName && g.folderName.split("/").some((s) => /^ppts?$/i.test(s)))
+    .flatMap((g) => g.files)
+    .filter((f) => QUIZ_SOURCE_MIMES.has(f.mimeType))
+    .map((f) => ({
+      id: f.id,
+      name: f.name,
+      mimeType: f.mimeType,
+      webViewLink: f.webViewLink,
+      sessionLabel: parsePptSessionLabel(f.name),
+    }));
+}

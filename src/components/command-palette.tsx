@@ -9,6 +9,7 @@ import {
   FilePlusIcon,
   GraduationCapIcon,
   NewspaperIcon,
+  PencilLineIcon,
   RssIcon,
   SearchIcon,
 } from "lucide-react";
@@ -26,6 +27,7 @@ const SECTIONS = [
   { label: "Home", href: "/", icon: SearchIcon },
   { label: "Subjects", href: "/subjects", icon: GraduationCapIcon },
   { label: "Class Prep", href: "/class-prep", icon: CalendarCheckIcon },
+  { label: "Quiz", href: "/quiz", icon: PencilLineIcon },
   { label: "Industries", href: "/industries", icon: Building2Icon },
   { label: "Articles (Magazines)", href: "/magazines", icon: NewspaperIcon },
   { label: "Current News", href: "/news", icon: RssIcon },

@@ -5,6 +5,7 @@ import type { DriveFileEntry } from "./client";
 const GOOGLE_DOC_MIME = "application/vnd.google-apps.document";
 const GOOGLE_SLIDES_MIME = "application/vnd.google-apps.presentation";
 const PDF_MIME = "application/pdf";
+const PPTX_MIME = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
 const MAX_CONTENT_CHARS = 4000;
 
 async function exportGoogleWorkspaceAsText(drive: drive_v3.Drive, fileId: string, maxChars: number): Promise<string> {
@@ -33,6 +34,34 @@ async function extractPdfText(drive: drive_v3.Drive, fileId: string, maxChars: n
   }
 }
 
+// Uploaded .pptx files (as opposed to native Google Slides) aren't
+// exportable via the Drive API's export endpoint — that only works for
+// Google's own Workspace formats. A .pptx is just a zip of XML, though:
+// unzip it and pull every <a:t> text run out of each slide's XML, in slide
+// order. Pure JS, no native bindings — same serverless-safety reasoning
+// that ruled out pdf-parse's canvas dependency applies here too.
+async function extractPptxText(drive: drive_v3.Drive, fileId: string, maxChars: number): Promise<string> {
+  try {
+    const res = await drive.files.get({ fileId, alt: "media" }, { responseType: "arraybuffer" });
+    const JSZip = (await import("jszip")).default;
+    const zip = await JSZip.loadAsync(res.data as ArrayBuffer);
+    const slideFiles = Object.keys(zip.files)
+      .filter((f) => /^ppt\/slides\/slide\d+\.xml$/.test(f))
+      .sort((a, b) => Number(a.match(/slide(\d+)/)![1]) - Number(b.match(/slide(\d+)/)![1]));
+
+    let text = "";
+    for (const f of slideFiles) {
+      const xml = await zip.files[f].async("string");
+      const runs = [...xml.matchAll(/<a:t>([^<]*)<\/a:t>/g)].map((m) => m[1]);
+      text += runs.join(" ") + "\n\n";
+      if (text.length >= maxChars) break;
+    }
+    return text.slice(0, maxChars);
+  } catch {
+    return "";
+  }
+}
+
 export async function extractFileContent(
   drive: drive_v3.Drive,
   file: DriveFileEntry,
@@ -43,6 +72,9 @@ export async function extractFileContent(
   }
   if (file.mimeType === PDF_MIME) {
     return extractPdfText(drive, file.id, maxChars);
+  }
+  if (file.mimeType === PPTX_MIME) {
+    return extractPptxText(drive, file.id, maxChars);
   }
   return "";
 }

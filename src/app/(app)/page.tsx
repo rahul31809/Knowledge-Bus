@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookmarkIcon, Building2Icon, GraduationCapIcon, NewspaperIcon, RssIcon } from "lucide-react";
+import { BookmarkIcon, Building2Icon, GraduationCapIcon, NewspaperIcon, PencilLineIcon, RssIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { DashboardCard } from "@/components/dashboard-card";
 import { GreetingHeading } from "@/components/greeting-heading";
@@ -142,6 +142,16 @@ export default async function BrowsePage() {
           meta={`${briefingEntries.length} saved`}
           className="animate-fade-in-up"
           style={{ animationDelay: "240ms" }}
+        />
+
+        <DashboardCard
+          href="/quiz"
+          icon={PencilLineIcon}
+          accent="cyan"
+          title="Quiz"
+          description="Generate a fresh exam-style quiz from any subject's session PPTs"
+          className="animate-fade-in-up"
+          style={{ animationDelay: "300ms" }}
         />
       </div>
     </div>
