@@ -1,4 +1,4 @@
-import { ChevronRightIcon, ClockIcon } from "lucide-react";
+import { ChevronRightIcon } from "lucide-react";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { DriveFileLink } from "@/components/drive-file-link";
 import { fetchDriveFileTagsForSubject, fetchUpcomingSessions } from "@/lib/queries";
@@ -35,33 +35,26 @@ interface FileData {
   summary: string | null;
 }
 
-function TimeBadge({ time }: { time: string | null }) {
-  if (!time) return <span className="w-24 shrink-0" />;
-  return (
-    <span className="flex w-24 shrink-0 items-center gap-1 text-xs text-muted-foreground">
-      <ClockIcon className="size-3 shrink-0" />
-      <span className="truncate">{time}</span>
-    </span>
-  );
-}
-
 function SessionRow({ session, fileDataMap }: { session: UpcomingSession; fileDataMap: Map<string, FileData> }) {
   if (!session.subject) {
     return (
       <div className="flex items-center gap-3 px-4 py-3">
-        <TimeBadge time={session.eventTime} />
-        <span className="truncate text-sm text-muted-foreground">{session.eventTitle}</span>
+        <span className="size-1.5 shrink-0 rounded-full bg-muted-foreground/30" />
+        <div className="flex min-w-0 flex-col">
+          <span className="truncate text-sm text-muted-foreground">{session.eventTitle}</span>
+          {session.eventTime ? <span className="text-xs text-muted-foreground/70">{session.eventTime}</span> : null}
+        </div>
         <span className="ml-auto shrink-0 text-xs text-muted-foreground/60">Subject not identified</span>
       </div>
     );
   }
 
-  const meta = [session.sessionLabel, session.sector].filter(Boolean).join(" — ");
+  const meta = [session.eventTime, session.sessionLabel, session.sector].filter(Boolean).join(" · ");
 
   if (session.files.length === 0) {
     return (
       <div className="flex items-center gap-3 px-4 py-3">
-        <TimeBadge time={session.eventTime} />
+        <span className="size-1.5 shrink-0 rounded-full bg-muted-foreground/30" />
         <div className="flex min-w-0 flex-col">
           <span className="truncate text-sm font-medium text-foreground">{session.subject}</span>
           {meta ? <span className="text-xs text-muted-foreground">{meta}</span> : null}
@@ -74,7 +67,6 @@ function SessionRow({ session, fileDataMap }: { session: UpcomingSession; fileDa
   return (
     <details name="class-prep-session" className="group/session">
       <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 hover:bg-accent [&::-webkit-details-marker]:hidden">
-        <TimeBadge time={session.eventTime} />
         <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground transition-transform group-open/session:rotate-90" />
         <div className="flex min-w-0 flex-col">
           <span className="truncate text-sm font-medium text-foreground">{session.subject}</span>
