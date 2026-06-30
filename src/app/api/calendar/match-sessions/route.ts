@@ -104,8 +104,12 @@ export async function GET(request: Request) {
       }
     }
 
-    const sessionLabel = await matchSessionFolder(matchReference, sessionGroups.map((g) => g.sessionLabel));
-    const files = sessionGroups.find((g) => g.sessionLabel === sessionLabel)?.files ?? [];
+    const matchedFolder = await matchSessionFolder(matchReference, sessionGroups.map((g) => g.sessionLabel));
+    const files = sessionGroups.find((g) => g.sessionLabel === matchedFolder)?.files ?? [];
+    // Fall back to the raw "Session N & M" reference parsed from the
+    // calendar title when no Drive folder matched — better to show the
+    // session number than nothing at all, even with no pre-reads to link.
+    const sessionLabel = matchedFolder ?? parsed.sessionRef.replace(/^session/i, "Session");
 
     results.push({ eventDate: row.date, eventTitle: row.title, subject, sessionLabel, sector, files });
   }

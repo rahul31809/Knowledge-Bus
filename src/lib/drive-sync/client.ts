@@ -255,11 +255,28 @@ export interface PreReadSessionGroup {
   files: DriveFileEntry[];
 }
 
-// Picks out the "Pre Reads/<session folder>" groups from a subject's full
-// file listing — the leaf segment (e.g. "Session 4 to 6") is what calendar
-// session references get matched against.
+// Picks out the "Pre Reads/<session or sector folder>/..." groups from a
+// subject's full file listing. The grouping key is whichever folder sits
+// directly under "Pre Reads" — not the leaf segment — because some subjects
+// nest an extra topic-name level below the session folder (e.g. BTDA's
+// "Pre Reads/Session 13&14/Technology Acceptance Model (TAM)-.../files");
+// using the leaf would surface the topic name instead of the session,
+// making it unmatchable. All files at any depth below that folder are
+// aggregated into one group.
 export function extractPreReadSessionGroups(groups: DriveFileGroup[]): PreReadSessionGroup[] {
-  return groups
-    .filter((g) => g.folderName && /pre[\s-]?reads/i.test(g.folderName) && g.folderName.includes("/"))
-    .map((g) => ({ sessionLabel: g.folderName!.split("/").pop()!, files: g.files }));
+  const bySession = new Map<string, DriveFileEntry[]>();
+
+  for (const g of groups) {
+    if (!g.folderName) continue;
+    const segments = g.folderName.split("/");
+    const preReadsIndex = segments.findIndex((s) => /pre[\s-]?reads/i.test(s));
+    if (preReadsIndex === -1 || preReadsIndex + 1 >= segments.length) continue;
+
+    const groupKey = segments[preReadsIndex + 1];
+    const existing = bySession.get(groupKey) ?? [];
+    existing.push(...g.files);
+    bySession.set(groupKey, existing);
+  }
+
+  return [...bySession.entries()].map(([sessionLabel, files]) => ({ sessionLabel, files }));
 }
