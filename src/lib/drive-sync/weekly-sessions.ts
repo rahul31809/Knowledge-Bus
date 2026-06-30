@@ -5,6 +5,7 @@ const WEEKLY_SESSIONS_FILENAME = "weekly-sessions.xlsx";
 
 export interface RawCalendarRow {
   date: string;
+  time: string | null;
   title: string;
 }
 
@@ -45,8 +46,9 @@ export async function fetchWeeklySessionRows(): Promise<RawCalendarRow[] | null>
       .map((row) => {
         const date = findColumn(row, ["date"]);
         const title = findColumn(row, ["event title", "title", "event"]);
+        const time = findColumn(row, ["time"]);
         if (typeof date !== "string" || typeof title !== "string" || !date.trim() || !title.trim()) return null;
-        return { date: date.trim(), title: title.trim() };
+        return { date: date.trim(), title: title.trim(), time: typeof time === "string" && time.trim() ? time.trim() : null };
       })
       .filter((r): r is RawCalendarRow => r !== null);
   } catch {

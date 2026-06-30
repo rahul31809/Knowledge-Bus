@@ -563,6 +563,7 @@ export async function fetchSavedNewsArticles(supabase: SupabaseServerClient): Pr
 
 interface UpcomingSessionRow {
   event_date: string;
+  event_time: string | null;
   event_title: string;
   subject: string | null;
   session_label: string | null;
@@ -576,7 +577,7 @@ export async function fetchUpcomingSessions(supabase: SupabaseServerClient): Pro
   const today = new Date().toISOString().slice(0, 10);
   const { data, error } = await supabase
     .from("upcoming_sessions")
-    .select("event_date, event_title, subject, session_label, sector, files")
+    .select("event_date, event_time, event_title, subject, session_label, sector, files")
     .gte("event_date", today)
     .order("event_date", { ascending: true });
 
@@ -585,6 +586,7 @@ export async function fetchUpcomingSessions(supabase: SupabaseServerClient): Pro
     const r = row as UpcomingSessionRow;
     return {
       eventDate: r.event_date,
+      eventTime: r.event_time,
       eventTitle: r.event_title,
       subject: r.subject,
       sessionLabel: r.session_label,

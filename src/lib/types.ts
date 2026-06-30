@@ -324,6 +324,7 @@ export interface UpcomingSessionFile {
 
 export interface UpcomingSession {
   eventDate: string;
+  eventTime: string | null;
   eventTitle: string;
   subject: string | null;
   sessionLabel: string | null;

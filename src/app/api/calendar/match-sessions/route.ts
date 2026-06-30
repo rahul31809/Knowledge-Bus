@@ -23,6 +23,7 @@ const DISPLAY_ONLY_SUBJECTS: Record<string, string> = {
 
 interface MatchResult {
   eventDate: string;
+  eventTime: string | null;
   eventTitle: string;
   subject: string | null;
   sessionLabel: string | null;
@@ -66,20 +67,20 @@ export async function GET(request: Request) {
   for (const row of sessionRows) {
     const parsed = parseSessionEventTitle(row.title);
     if (!parsed) {
-      results.push({ eventDate: row.date, eventTitle: row.title, subject: null, sessionLabel: null, sector: null, files: [] });
+      results.push({ eventDate: row.date, eventTime: row.time, eventTitle: row.title, subject: null, sessionLabel: null, sector: null, files: [] });
       continue;
     }
 
     const displayOnly = DISPLAY_ONLY_SUBJECTS[parsed.subjectCode.trim().toLowerCase()];
     if (displayOnly) {
-      results.push({ eventDate: row.date, eventTitle: row.title, subject: displayOnly, sessionLabel: null, sector: null, files: [] });
+      results.push({ eventDate: row.date, eventTime: row.time, eventTitle: row.title, subject: displayOnly, sessionLabel: null, sector: null, files: [] });
       continue;
     }
 
     candidateSubjects ??= (await fetchDriveSubjectNames()) ?? [];
     const subject = await matchSubjectName(parsed.subjectCode, candidateSubjects);
     if (!subject) {
-      results.push({ eventDate: row.date, eventTitle: row.title, subject: null, sessionLabel: null, sector: null, files: [] });
+      results.push({ eventDate: row.date, eventTime: row.time, eventTitle: row.title, subject: null, sessionLabel: null, sector: null, files: [] });
       continue;
     }
 
@@ -111,7 +112,7 @@ export async function GET(request: Request) {
     // session number than nothing at all, even with no pre-reads to link.
     const sessionLabel = matchedFolder ?? parsed.sessionRef.replace(/^session/i, "Session");
 
-    results.push({ eventDate: row.date, eventTitle: row.title, subject, sessionLabel, sector, files });
+    results.push({ eventDate: row.date, eventTime: row.time, eventTitle: row.title, subject, sessionLabel, sector, files });
   }
 
   // The Excel represents the full current week each time it's regenerated —
@@ -122,6 +123,7 @@ export async function GET(request: Request) {
     const { error } = await supabase.from("upcoming_sessions").insert(
       results.map((r) => ({
         event_date: r.eventDate,
+        event_time: r.eventTime,
         event_title: r.eventTitle,
         subject: r.subject,
         session_label: r.sessionLabel,
