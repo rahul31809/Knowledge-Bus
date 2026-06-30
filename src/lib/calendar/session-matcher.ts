@@ -60,7 +60,7 @@ Output ONLY the exact matching candidate string with no extra text, or output ex
 // so new subjects need no code changes here.
 export async function matchSubjectName(subjectCode: string, candidateSubjects: string[]): Promise<string | null> {
   return pickBestMatch(
-    `An MBA timetable lists a class under the code or short name "${subjectCode}". Which of these actual course names is it most likely referring to?`,
+    `An MBA timetable lists a class under the code or short name "${subjectCode}". Which of these actual course names is it referring to? Only pick one if it's a confident, specific match (an abbreviation expansion or a clear partial/full name match) — the candidate list may not contain the right course at all, in which case picking the closest-sounding wrong one is worse than admitting no match.`,
     candidateSubjects
   );
 }

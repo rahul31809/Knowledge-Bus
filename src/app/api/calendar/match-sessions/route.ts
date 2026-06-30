@@ -13,6 +13,14 @@ export const maxDuration = 120;
 // session-to-sector table instead. See extractSectorForSession.
 const SECTOR_OUTLINE_SUBJECT = "Sector Strategic Analysis";
 
+// Subjects with no Drive folder yet — display name only, skip subject
+// fuzzy-matching and pre-read lookup entirely rather than guessing wrong
+// against whatever Drive folder happens to sound closest. Keyed by the
+// calendar's subject code, lowercased.
+const DISPLAY_ONLY_SUBJECTS: Record<string, string> = {
+  mcom: "Management Communication",
+};
+
 interface MatchResult {
   eventDate: string;
   eventTitle: string;
@@ -59,6 +67,12 @@ export async function GET(request: Request) {
     const parsed = parseSessionEventTitle(row.title);
     if (!parsed) {
       results.push({ eventDate: row.date, eventTitle: row.title, subject: null, sessionLabel: null, sector: null, files: [] });
+      continue;
+    }
+
+    const displayOnly = DISPLAY_ONLY_SUBJECTS[parsed.subjectCode.trim().toLowerCase()];
+    if (displayOnly) {
+      results.push({ eventDate: row.date, eventTitle: row.title, subject: displayOnly, sessionLabel: null, sector: null, files: [] });
       continue;
     }
 

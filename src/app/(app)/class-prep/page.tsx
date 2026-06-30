@@ -62,7 +62,7 @@ function SessionRow({ session, fileDataMap }: { session: UpcomingSession; fileDa
   }
 
   return (
-    <details className="group/session">
+    <details name="class-prep-session" className="group/session">
       <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 hover:bg-accent [&::-webkit-details-marker]:hidden">
         <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground transition-transform group-open/session:rotate-90" />
         <div className="flex min-w-0 flex-col">
