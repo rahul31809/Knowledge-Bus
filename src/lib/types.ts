@@ -327,6 +327,7 @@ export interface UpcomingSession {
   eventTitle: string;
   subject: string | null;
   sessionLabel: string | null;
+  sector: string | null;
   files: UpcomingSessionFile[];
 }
 

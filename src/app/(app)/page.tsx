@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookmarkIcon, Building2Icon, CalendarCheckIcon, GraduationCapIcon, NewspaperIcon, RssIcon } from "lucide-react";
+import { BookmarkIcon, Building2Icon, GraduationCapIcon, NewspaperIcon, RssIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { DashboardCard } from "@/components/dashboard-card";
 import { GreetingHeading } from "@/components/greeting-heading";
@@ -11,7 +11,6 @@ import {
   fetchNewsArticlesByCategory,
   fetchRecentEntries,
   fetchSubjects,
-  fetchUpcomingSessions,
   withDriveOnlySubjects,
 } from "@/lib/queries";
 import { entryTypeLabel, formatEntryDate } from "@/lib/types";
@@ -21,16 +20,14 @@ import { cn } from "@/lib/utils";
 export default async function BrowsePage() {
   const supabase = await createClient();
 
-  const [subjects, driveSubjectNames, categories, briefingEntries, newsCategories, recentEntries, upcomingSessions] =
-    await Promise.all([
-      fetchSubjects(supabase),
-      fetchDriveSubjectNames().catch(() => null),
-      fetchMagazineArticlesByCategory(supabase),
-      fetchEntries(supabase, { excludeType: "study_notes" }),
-      fetchNewsArticlesByCategory(supabase),
-      fetchRecentEntries(supabase, 3),
-      fetchUpcomingSessions(supabase),
-    ]);
+  const [subjects, driveSubjectNames, categories, briefingEntries, newsCategories, recentEntries] = await Promise.all([
+    fetchSubjects(supabase),
+    fetchDriveSubjectNames().catch(() => null),
+    fetchMagazineArticlesByCategory(supabase),
+    fetchEntries(supabase, { excludeType: "study_notes" }),
+    fetchNewsArticlesByCategory(supabase),
+    fetchRecentEntries(supabase, 3),
+  ]);
 
   const allSubjects = withDriveOnlySubjects(subjects, driveSubjectNames);
 
@@ -145,17 +142,6 @@ export default async function BrowsePage() {
           meta={`${briefingEntries.length} saved`}
           className="animate-fade-in-up"
           style={{ animationDelay: "240ms" }}
-        />
-
-        <DashboardCard
-          href="/class-prep"
-          icon={CalendarCheckIcon}
-          accent="rose"
-          title="Class Prep"
-          description="This week's sessions, synced from your calendar, with linked pre-reads"
-          meta={upcomingSessions.length > 0 ? `${upcomingSessions.length} session${upcomingSessions.length === 1 ? "" : "s"} this week` : "No sessions synced yet"}
-          className="animate-fade-in-up"
-          style={{ animationDelay: "300ms" }}
         />
       </div>
     </div>

@@ -1,17 +1,24 @@
 import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient as createSessionClient } from "@/lib/supabase/server";
-import { extractPreReadSessionGroups, fetchDriveSubjectNames, fetchSubjectDriveResources } from "@/lib/drive-sync/client";
+import { extractPreReadSessionGroups, fetchDriveSubjectNames, fetchSubjectDriveResources, getDriveClient } from "@/lib/drive-sync/client";
+import { extractFileContent } from "@/lib/drive-sync/tagger";
 import { fetchWeeklySessionRows } from "@/lib/drive-sync/weekly-sessions";
-import { matchSessionFolder, matchSubjectName, parseSessionEventTitle } from "@/lib/calendar/session-matcher";
+import { extractSectorForSession, matchSessionFolder, matchSubjectName, parseSessionEventTitle } from "@/lib/calendar/session-matcher";
 
 export const maxDuration = 120;
+
+// Exception: this subject's Pre Reads are organized by sector (Energy,
+// Fintech, ...), not by session number — the Course Outline has a
+// session-to-sector table instead. See extractSectorForSession.
+const SECTOR_OUTLINE_SUBJECT = "Sector Strategic Analysis";
 
 interface MatchResult {
   eventDate: string;
   eventTitle: string;
   subject: string | null;
   sessionLabel: string | null;
+  sector: string | null;
   files: { id: string; name: string; mimeType: string; webViewLink: string }[];
 }
 
@@ -46,27 +53,47 @@ export async function GET(request: Request) {
 
   const results: MatchResult[] = [];
   let candidateSubjects: string[] | null = null;
+  const outlineTextCache = new Map<string, string>();
 
   for (const row of sessionRows) {
     const parsed = parseSessionEventTitle(row.title);
     if (!parsed) {
-      results.push({ eventDate: row.date, eventTitle: row.title, subject: null, sessionLabel: null, files: [] });
+      results.push({ eventDate: row.date, eventTitle: row.title, subject: null, sessionLabel: null, sector: null, files: [] });
       continue;
     }
 
     candidateSubjects ??= (await fetchDriveSubjectNames()) ?? [];
     const subject = await matchSubjectName(parsed.subjectCode, candidateSubjects);
     if (!subject) {
-      results.push({ eventDate: row.date, eventTitle: row.title, subject: null, sessionLabel: null, files: [] });
+      results.push({ eventDate: row.date, eventTitle: row.title, subject: null, sessionLabel: null, sector: null, files: [] });
       continue;
     }
 
     const drive = await fetchSubjectDriveResources(subject);
     const sessionGroups = drive.status === "found" ? extractPreReadSessionGroups(drive.files) : [];
-    const sessionLabel = await matchSessionFolder(parsed.sessionRef, sessionGroups.map((g) => g.sessionLabel));
+
+    let matchReference = parsed.sessionRef;
+    let sector: string | null = null;
+
+    if (subject === SECTOR_OUTLINE_SUBJECT && drive.status === "found") {
+      try {
+        let outlineText = outlineTextCache.get(subject);
+        if (outlineText === undefined) {
+          const outlineFile = drive.files.flatMap((g) => g.files).find((f) => /course outline/i.test(f.name));
+          outlineText = outlineFile ? await extractFileContent(getDriveClient(), outlineFile, 12000) : "";
+          outlineTextCache.set(subject, outlineText);
+        }
+        sector = await extractSectorForSession(outlineText, parsed.sessionRef);
+        if (sector) matchReference = sector;
+      } catch {
+        // Outline extraction failing shouldn't block subject/session matching
+      }
+    }
+
+    const sessionLabel = await matchSessionFolder(matchReference, sessionGroups.map((g) => g.sessionLabel));
     const files = sessionGroups.find((g) => g.sessionLabel === sessionLabel)?.files ?? [];
 
-    results.push({ eventDate: row.date, eventTitle: row.title, subject, sessionLabel, files });
+    results.push({ eventDate: row.date, eventTitle: row.title, subject, sessionLabel, sector, files });
   }
 
   // The Excel represents the full current week each time it's regenerated —
@@ -80,6 +107,7 @@ export async function GET(request: Request) {
         event_title: r.eventTitle,
         subject: r.subject,
         session_label: r.sessionLabel,
+        sector: r.sector,
         files: r.files,
       }))
     );

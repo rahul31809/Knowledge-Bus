@@ -1,6 +1,7 @@
-import { ChevronRightIcon, ExternalLinkIcon, FileTextIcon } from "lucide-react";
+import { ChevronRightIcon } from "lucide-react";
 import { Breadcrumbs } from "@/components/breadcrumbs";
-import { fetchUpcomingSessions } from "@/lib/queries";
+import { DriveFileLink } from "@/components/drive-file-link";
+import { fetchDriveFileTagsForSubject, fetchUpcomingSessions } from "@/lib/queries";
 import type { UpcomingSession } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
 
@@ -29,7 +30,12 @@ function groupByDate(sessions: UpcomingSession[]): { date: string; sessions: Upc
     .map(([date, sessions]) => ({ date, sessions }));
 }
 
-function SessionRow({ session }: { session: UpcomingSession }) {
+interface FileData {
+  tags: string[];
+  summary: string | null;
+}
+
+function SessionRow({ session, fileDataMap }: { session: UpcomingSession; fileDataMap: Map<string, FileData> }) {
   if (!session.subject) {
     return (
       <div className="flex items-center gap-3 px-4 py-3">
@@ -40,13 +46,15 @@ function SessionRow({ session }: { session: UpcomingSession }) {
     );
   }
 
+  const meta = [session.sessionLabel, session.sector].filter(Boolean).join(" — ");
+
   if (session.files.length === 0) {
     return (
       <div className="flex items-center gap-3 px-4 py-3">
         <span className="size-1.5 shrink-0 rounded-full bg-muted-foreground/30" />
         <div className="flex min-w-0 flex-col">
           <span className="truncate text-sm font-medium text-foreground">{session.subject}</span>
-          {session.sessionLabel ? <span className="text-xs text-muted-foreground">{session.sessionLabel}</span> : null}
+          {meta ? <span className="text-xs text-muted-foreground">{meta}</span> : null}
         </div>
         <span className="ml-auto shrink-0 text-xs text-muted-foreground/60">No pre-reads found</span>
       </div>
@@ -59,25 +67,22 @@ function SessionRow({ session }: { session: UpcomingSession }) {
         <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground transition-transform group-open/session:rotate-90" />
         <div className="flex min-w-0 flex-col">
           <span className="truncate text-sm font-medium text-foreground">{session.subject}</span>
-          {session.sessionLabel ? <span className="text-xs text-muted-foreground">{session.sessionLabel}</span> : null}
+          {meta ? <span className="text-xs text-muted-foreground">{meta}</span> : null}
         </div>
         <span className="ml-auto shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
           {session.files.length} pre-read{session.files.length === 1 ? "" : "s"}
         </span>
       </summary>
-      <div className="flex flex-col gap-0.5 px-4 pb-3 pl-10">
+      <div className="flex flex-col gap-0.5 pb-2">
         {session.files.map((file) => (
-          <a
+          <DriveFileLink
             key={file.id}
-            href={file.webViewLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 rounded-md py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
-          >
-            <FileTextIcon className="size-3.5 shrink-0 text-red-500 dark:text-red-400" />
-            <span className="truncate">{file.name}</span>
-            <ExternalLinkIcon className="ml-auto size-3 shrink-0 text-muted-foreground/40" />
-          </a>
+            file={file}
+            subject={session.subject!}
+            tags={fileDataMap.get(file.id)?.tags ?? []}
+            initialSummary={fileDataMap.get(file.id)?.summary ?? null}
+            indentPx={28}
+          />
         ))}
       </div>
     </details>
@@ -88,6 +93,12 @@ export default async function ClassPrepPage() {
   const supabase = await createClient();
   const sessions = await fetchUpcomingSessions(supabase);
   const dateGroups = groupByDate(sessions);
+
+  const subjects = [...new Set(sessions.map((s) => s.subject).filter((s): s is string => s !== null))];
+  const tagsBySubject = await Promise.all(subjects.map((subject) => fetchDriveFileTagsForSubject(supabase, subject)));
+  const fileDataMap = new Map<string, FileData>(
+    tagsBySubject.flat().map((t) => [t.file_id, { tags: t.tags, summary: t.ai_summary }])
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -113,7 +124,7 @@ export default async function ClassPrepPage() {
               </div>
               <div className="divide-y divide-border">
                 {sessions.map((session) => (
-                  <SessionRow key={`${session.eventDate}-${session.eventTitle}`} session={session} />
+                  <SessionRow key={`${session.eventDate}-${session.eventTitle}`} session={session} fileDataMap={fileDataMap} />
                 ))}
               </div>
             </div>

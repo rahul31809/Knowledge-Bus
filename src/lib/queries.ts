@@ -566,6 +566,7 @@ interface UpcomingSessionRow {
   event_title: string;
   subject: string | null;
   session_label: string | null;
+  sector: string | null;
   files: UpcomingSessionFile[];
 }
 
@@ -575,7 +576,7 @@ export async function fetchUpcomingSessions(supabase: SupabaseServerClient): Pro
   const today = new Date().toISOString().slice(0, 10);
   const { data, error } = await supabase
     .from("upcoming_sessions")
-    .select("event_date, event_title, subject, session_label, files")
+    .select("event_date, event_title, subject, session_label, sector, files")
     .gte("event_date", today)
     .order("event_date", { ascending: true });
 
@@ -587,6 +588,7 @@ export async function fetchUpcomingSessions(supabase: SupabaseServerClient): Pro
       eventTitle: r.event_title,
       subject: r.subject,
       sessionLabel: r.session_label,
+      sector: r.sector,
       files: r.files ?? [],
     };
   });

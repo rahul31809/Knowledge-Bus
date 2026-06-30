@@ -75,3 +75,26 @@ export async function matchSessionFolder(sessionRef: string, candidateFolders: s
     candidateFolders
   );
 }
+
+// Exception for subjects whose Course Outline lists a session-to-sector
+// table (Pre Reads is organized by sector, not session number) — e.g.
+// "Sector Strategic Analysis", where session 23-24 maps to "Software
+// Products / Services". Extracts the sector name from the outline text for
+// a given session reference, rather than from the Drive folder names.
+export async function extractSectorForSession(courseOutlineText: string, sessionRef: string): Promise<string | null> {
+  const apiKey = process.env.GOOGLE_AI_API_KEY;
+  if (!apiKey || !courseOutlineText.trim()) return null;
+
+  const ai = new GoogleGenAI({ apiKey });
+  const prompt = `This is a course outline document that includes a session-by-session schedule table mapping session numbers (often ranges like "3-4" or "23-24") to the sector/industry covered that session.
+
+Course outline:
+${courseOutlineText.trim()}
+
+The class in question is scheduled as "${sessionRef}". Find the row in the session schedule table whose session number/range includes this session, and output ONLY the sector name from that row (e.g. "Energy", "Fintech", "Automotive") — no extra words, no "Sector -" prefix, no guest/company names. If no matching row exists, output exactly NONE.`;
+
+  const result = await ai.models.generateContent({ model: "gemini-3.1-flash-lite", contents: prompt });
+  const text = result.text?.trim() ?? "";
+  if (!text || text === "NONE") return null;
+  return text;
+}

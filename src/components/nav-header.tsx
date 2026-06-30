@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { CommandIcon } from "lucide-react";
+import { CalendarCheckIcon, CommandIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -23,12 +23,19 @@ export function NavHeader({ userEmail }: { userEmail: string | null }) {
   return (
     <header className="border-b bg-card">
       <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4">
           <Link href="/" className="flex flex-col leading-tight">
             <span className="bg-gradient-to-r from-indigo-500 via-violet-500 to-blue-500 bg-clip-text text-2xl font-bold text-transparent">
               Knowledge Base
             </span>
             <span className="text-sm text-muted-foreground">Created by Rahul Agarwal (MBA, SPJIMR)</span>
+          </Link>
+          <Link
+            href="/class-prep"
+            className="flex items-center gap-1.5 rounded-md border border-input px-2.5 py-1.5 text-sm font-medium text-muted-foreground hover:border-primary/40 hover:text-foreground"
+          >
+            <CalendarCheckIcon className="size-4 text-rose-500 dark:text-rose-400" />
+            Calendar
           </Link>
         </div>
 
