@@ -68,23 +68,31 @@ export async function generateQuizQuestions(
 
   const ai = new GoogleGenAI({ apiKey });
 
-  const prompt = `You are an MBA tutor at SPJIMR creating an exam-style quiz from this class material. Two principles: (1) test genuine understanding and application, not just recall — a good question can't be answered by spotting a keyword, it requires following the actual reasoning; (2) fight the illusion of competence — distractors should be plausible enough that guessing without understanding fails.
+  const prompt = `You are an MBA professor at SPJIMR helping a student prepare for exams.
+
+The input below is raw text extracted from PowerPoint lecture slides — bullet points, framework names, and sparse notes exactly as they appear on slides, without the verbal explanations given in class.
 
 SUBJECT: ${subject}
 
-MATERIAL:
+SLIDE CONTENT:
 ${content.trim()}
 
-Generate exactly ${counts.easy} easy, ${counts.medium} medium, and ${counts.hard} hard multiple-choice questions (${total} total) grounded only in this material.
+STEP 1 — RECONSTRUCT (keep in your reasoning, do NOT output):
+For each concept, framework, or model mentioned in the slides, expand it as you would explain it to students: what it means, how it works mechanically, why it matters, a concrete example or scenario where it applies, and the most common misconceptions about it. Use your expert knowledge to fill the gaps the bullet points leave — the slides are the curriculum anchor (what topics to cover), not the limit of what you know.
+
+STEP 2 — GENERATE:
+From that reconstructed understanding, generate exactly ${counts.easy} easy, ${counts.medium} medium, and ${counts.hard} hard multiple-choice questions (${total} total).
 
 DIFFICULTY MEANS:
-- easy: recall of a definition, framework name, or fact stated directly in the material
-- medium: applying a concept to a short scenario, or distinguishing between two related ideas from the material
-- hard: multi-step reasoning, synthesizing across multiple parts of the material, or identifying which framework/approach applies in a non-obvious case
+- easy: understanding a definition or core mechanism of a concept from the slides
+- medium: applying a concept to a scenario, or distinguishing between two related ideas
+- hard: multi-step reasoning, synthesising across concepts, or identifying which framework applies in a non-obvious case
 
-For each question, assign a short "topic" label (2-4 words, e.g. "Capital Structure", "NPV vs IRR") so a learner's wrong answers can later be grouped by topic to reveal where they're weak.
+Two non-negotiable principles: (1) a good question can't be answered by spotting a keyword from the slides — it requires following the actual reasoning; (2) distractors must be plausible misconceptions, not throwaway wrong options — the wrong-but-tempting option is where the learning is.
 
-For each option that isn't correct, make it a genuinely tempting distractor — a plausible misconception or a common mix-up with the right answer, not a throwaway wrong option. The wrong-but-tempting option is where the learning is, so the explanation must name it and say specifically why it's wrong.
+For each question assign a short "topic" label (2–4 words, e.g. "Capital Structure", "NPV vs IRR").
+
+The explanation must name the most tempting wrong option and say specifically why it's wrong.
 
 Output ONLY a valid JSON array, each item shaped exactly like this:
 {"topic": "string", "difficulty": "easy"|"medium"|"hard", "question": "string", "options": ["string","string","string","string"], "correctIndex": 0, "explanation": "1-2 sentences: why the correct answer is right, and specifically why the most tempting wrong option is wrong"}
