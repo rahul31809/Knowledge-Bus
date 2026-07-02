@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenAI } from "@google/genai";
 
 export interface QuizQuestion {
   id: string;
@@ -58,16 +58,16 @@ export async function generateQuizQuestions(
   parts: FilePart[],
   counts: DifficultyCounts
 ): Promise<QuizQuestion[]> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
+  const apiKey = process.env.GOOGLE_AI_API_KEY;
+  if (!apiKey) throw new Error("GOOGLE_AI_API_KEY is not set");
   if (!parts.length) throw new Error("No files provided");
 
   const total = counts.easy + counts.medium + counts.hard;
   if (total <= 0) throw new Error("At least one question must be requested");
 
-  const client = new Anthropic({ apiKey });
+  const ai = new GoogleGenAI({ apiKey });
 
-  const prompt = `You are an MBA professor at SPJIMR helping a student prepare for exams. You have been given the actual session presentation slides above — study them fully including all diagrams, tables, frameworks, and visual content.
+  const prompt = `You are an MBA professor at SPJIMR helping a student prepare for exams. You have been given the actual session presentation slides — study them fully including all diagrams, tables, frameworks, and visual content.
 
 SUBJECT: ${subject}
 
@@ -94,47 +94,33 @@ Output ONLY a valid JSON array, each item shaped exactly like this:
 
 Exactly 4 options per question, exactly one correct (correctIndex 0-3). No markdown, no preamble, no trailing commentary — output the JSON array only.`;
 
-  const contentBlocks: Anthropic.MessageParam["content"] = [];
-
+  const contentParts: object[] = [];
   for (const part of parts) {
     if (part.type === "pdf") {
-      contentBlocks.push({
-        type: "document",
-        source: {
-          type: "base64",
-          media_type: "application/pdf",
-          data: part.pdfBase64,
-        },
-        title: part.name,
-      } as Anthropic.DocumentBlockParam);
+      contentParts.push({ text: `[Slides: ${part.name}]` });
+      contentParts.push({ inlineData: { mimeType: "application/pdf", data: part.pdfBase64 } });
     } else if (part.text) {
-      contentBlocks.push({
-        type: "text",
-        text: `[Slides: ${part.name}]\n${part.text}`,
-      });
+      contentParts.push({ text: `[Slides: ${part.name}]\n${part.text}` });
     }
   }
+  contentParts.push({ text: prompt });
 
-  contentBlocks.push({ type: "text", text: prompt });
-
-  const response = await client.messages.create({
-    model: "claude-opus-4-8",
-    max_tokens: 4096,
-    messages: [{ role: "user", content: contentBlocks }],
+  const result = await ai.models.generateContent({
+    model: "gemini-2.0-flash",
+    contents: [{ role: "user", parts: contentParts }],
   });
 
-  const raw = response.content.find((b) => b.type === "text");
-  const text = raw?.type === "text" ? raw.text : "";
+  const text = result.text ?? "";
   const match = text.match(/\[[\s\S]*\]/);
-  if (!match) throw new Error("Claude did not return a parseable question set");
+  if (!match) throw new Error("Gemini did not return a parseable question set");
 
   let parsed: unknown;
   try {
     parsed = JSON.parse(match[0]);
   } catch {
-    throw new Error("Claude returned malformed JSON for the question set");
+    throw new Error("Gemini returned malformed JSON for the question set");
   }
-  if (!Array.isArray(parsed)) throw new Error("Claude's response was not a list of questions");
+  if (!Array.isArray(parsed)) throw new Error("Gemini's response was not a list of questions");
 
   const questions = parsed
     .filter((q): q is RawQuestion => typeof q === "object" && q !== null)
