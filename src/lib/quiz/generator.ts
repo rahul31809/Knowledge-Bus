@@ -106,7 +106,7 @@ Exactly 4 options per question, exactly one correct (correctIndex 0-3). No markd
   contentParts.push({ text: prompt });
 
   const result = await ai.models.generateContent({
-    model: "gemini-1.5-flash",
+    model: "gemini-3.1-flash-lite",
     contents: [{ role: "user", parts: contentParts }],
   });
 
