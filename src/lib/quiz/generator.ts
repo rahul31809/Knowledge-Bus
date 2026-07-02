@@ -99,7 +99,7 @@ Output ONLY a valid JSON array, each item shaped exactly like this:
 
 Exactly 4 options per question, exactly one correct (correctIndex 0-3). No markdown, no preamble, no trailing commentary — output the JSON array only.`;
 
-  const result = await ai.models.generateContent({ model: "gemini-3.1-flash-lite", contents: prompt });
+  const result = await ai.models.generateContent({ model: "gemini-2.0-flash", contents: prompt });
   const text = result.text ?? "";
   const match = text.match(/\[[\s\S]*\]/);
   if (!match) throw new Error("Gemini did not return a parseable question set");
