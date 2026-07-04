@@ -266,11 +266,15 @@ function normalizeMarketSegments(raw: unknown): PrimerMarketSegments {
   const obj = isRecord(raw) ? raw : {};
   return {
     segments: asArray(obj.segments)
-      .map((s) => ({
-        name: asString(s.name),
-        description: asString(s.description),
-        examples: asString(s.examples),
-      }))
+      .map((s) => {
+        const monetization = asString(s.monetization);
+        return {
+          name: asString(s.name),
+          description: asString(s.description),
+          examples: asString(s.examples),
+          ...(monetization ? { monetization } : {}),
+        };
+      })
       .filter((s) => s.name && s.description),
   };
 }
@@ -357,7 +361,7 @@ Return a single JSON object with exactly this structure. The strings and numbers
   },
   "market_segments": {
     "segments": [
-      {"name": "Segment name", "description": "1-2 sentences on what defines this segment and who plays in it", "examples": "2-3 example companies or players"}
+      {"name": "Segment name", "description": "1-2 sentences on what defines this segment and who plays in it", "examples": "2-3 example companies or players", "monetization": "1 sentence on how this segment type makes money — their primary revenue model"}
     ]
   },
   "policy_regulatory": {
@@ -473,7 +477,7 @@ Requirements:
 - "risk_matrix.financial", "risk_matrix.operational", "risk_matrix.regulatory", "risk_matrix.technology" each need 2-3 items.
 - "future_outlook.drivers" needs 3-4 items (growth tailwinds); "future_outlook.challenges" needs 3-4 items (headwinds and risks) — keep them clearly separate.
 - "value_chain.stages[].activities" needs 3-5 specific named activities per stage (e.g. for Airlines: "Route Planning", "Slot Allocation", "Fleet Scheduling" — not abstract descriptions).
-- "market_segments.segments" needs 3-5 segments that represent distinct player types or customer categories in this sub-sector; "examples" should name real companies or identifiable players.
+- "market_segments.segments" needs 3-5 segments that represent distinct player types or customer categories in this sub-sector; "examples" should name real companies or identifiable players; "monetization" should describe the primary revenue model for that segment type.
 - Be specific and quantitative. Output ONLY the JSON object, no commentary, no markdown fences.`;
 
   const result = await ai.models.generateContent({

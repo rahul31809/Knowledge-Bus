@@ -15,7 +15,6 @@ import { GlossaryGrid } from "@/components/industry-primer/glossary-grid";
 import { RevenueCostBreakdown } from "@/components/industry-primer/revenue-cost-breakdown";
 import { PorterFiveForces } from "@/components/industry-primer/porter-five-forces";
 import { PestleGrid } from "@/components/industry-primer/pestle-grid";
-import { BusinessModelsGrid } from "@/components/industry-primer/business-models-grid";
 import { RiskMatrixGrid } from "@/components/industry-primer/risk-matrix";
 import { MarketSegmentsGrid } from "@/components/industry-primer/market-segments-grid";
 import { generateIndustryPrimer } from "@/lib/industry-primers/generator";
@@ -92,6 +91,8 @@ export default async function IndustryPrimerPage({
 
       {primer ? (
         <div className="flex flex-col gap-4">
+
+          {/* ── 1. OVERVIEW ─────────────────────────────────────────────────── */}
           <section className="rounded-lg border border-border bg-card p-4">
             <h2 className="text-sm font-semibold text-foreground">
               <SourceLink query={`Overview ${searchContext}`}>Overview</SourceLink>
@@ -102,22 +103,7 @@ export default async function IndustryPrimerPage({
             </div>
           </section>
 
-          {primer.recent_updates && primer.recent_updates.updates.length > 0 && (
-            <section className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
-              <h2 className="mb-3 text-sm font-semibold text-foreground">
-                <SourceLink query={`${subsector.name} India latest news 2025`}>Recent Updates</SourceLink>
-              </h2>
-              <RecentUpdates updates={primer.recent_updates.updates} />
-            </section>
-          )}
-
-          {primer.glossary && primer.glossary.terms.length > 0 && (
-            <section className="rounded-lg border border-border bg-card p-4">
-              <h2 className="mb-3 text-sm font-semibold text-foreground">Industry Terminology</h2>
-              <GlossaryGrid terms={primer.glossary.terms} />
-            </section>
-          )}
-
+          {/* ── 2. MARKET SIZE & FUTURE OUTLOOK ─────────────────────────────── */}
           <div className="grid gap-4 lg:grid-cols-2">
             <section className="rounded-lg border border-border bg-card p-4">
               <h2 className="text-sm font-semibold text-foreground">
@@ -147,8 +133,8 @@ export default async function IndustryPrimerPage({
               <div className="mt-3">
                 <StatRow
                   stats={[
-                    { label: "Outlook", value: primer.future_outlook.projection_label },
-                    { label: "Projected Growth", value: primer.future_outlook.projected_cagr_label },
+                    { label: "Projected Size", value: primer.future_outlook.projection_label },
+                    { label: "Projected CAGR", value: primer.future_outlook.projected_cagr_label },
                   ]}
                 />
               </div>
@@ -158,7 +144,9 @@ export default async function IndustryPrimerPage({
             </section>
           </div>
 
-          {(primer.future_outlook.drivers.length > 0 || (primer.future_outlook.challenges && primer.future_outlook.challenges.length > 0)) && (
+          {/* ── 3. GROWTH DRIVERS & CHALLENGES ──────────────────────────────── */}
+          {(primer.future_outlook.drivers.length > 0 ||
+            (primer.future_outlook.challenges && primer.future_outlook.challenges.length > 0)) && (
             <div className="grid gap-4 lg:grid-cols-2">
               {primer.future_outlook.drivers.length > 0 && (
                 <section className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4">
@@ -183,6 +171,27 @@ export default async function IndustryPrimerPage({
             </div>
           )}
 
+          {/* ── 4. MARKET SEGMENTS (absorbs Business Models) ─────────────────── */}
+          {primer.market_segments && primer.market_segments.segments.length > 0 && (
+            <section className="rounded-lg border border-border bg-card p-4">
+              <h2 className="mb-3 text-sm font-semibold text-foreground">
+                <SourceLink query={`${subsector.name} market segments India`}>Market Segments</SourceLink>
+              </h2>
+              <MarketSegmentsGrid segments={primer.market_segments.segments} />
+            </section>
+          )}
+
+          {/* ── 5. VALUE CHAIN ───────────────────────────────────────────────── */}
+          <section className="rounded-lg border border-border bg-card p-4">
+            <h2 className="text-sm font-semibold text-foreground">
+              <SourceLink query={`Value Chain ${searchContext}`}>Value Chain</SourceLink>
+            </h2>
+            <div className="mt-3">
+              <ValueChainDiagram stages={primer.value_chain.stages} searchContext={searchContext} />
+            </div>
+          </section>
+
+          {/* ── 6. REVENUE & COST BREAKDOWN ─────────────────────────────────── */}
           {primer.revenue_cost_breakdown &&
             (primer.revenue_cost_breakdown.revenue.length > 0 || primer.revenue_cost_breakdown.costs.length > 0) && (
               <section className="rounded-lg border border-border bg-card p-4">
@@ -195,24 +204,44 @@ export default async function IndustryPrimerPage({
               </section>
             )}
 
+          {/* ── 7. MAJOR PLAYERS ────────────────────────────────────────────── */}
           <section className="rounded-lg border border-border bg-card p-4">
             <h2 className="text-sm font-semibold text-foreground">
-              <SourceLink query={`Value Chain ${searchContext}`}>Value Chain</SourceLink>
+              <SourceLink query={`Major Players ${searchContext}`}>Major Players</SourceLink>
             </h2>
             <div className="mt-3">
-              <ValueChainDiagram stages={primer.value_chain.stages} searchContext={searchContext} />
+              <PlayerComparison
+                players={primer.major_players.players}
+                industryName={industry.name}
+                subsectorName={subsector.name}
+                industrySlug={industrySlug}
+                subsectorSlug={subsectorSlug}
+                searchContext={searchContext}
+              />
             </div>
           </section>
 
-          {primer.market_segments && primer.market_segments.segments.length > 0 && (
-            <section className="rounded-lg border border-border bg-card p-4">
+          {/* ── 8. RECENT UPDATES ───────────────────────────────────────────── */}
+          {primer.recent_updates && primer.recent_updates.updates.length > 0 && (
+            <section className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
               <h2 className="mb-3 text-sm font-semibold text-foreground">
-                <SourceLink query={`${subsector.name} market segments India`}>Market Segments</SourceLink>
+                <SourceLink query={`${subsector.name} India latest news 2025`}>Recent Updates</SourceLink>
               </h2>
-              <MarketSegmentsGrid segments={primer.market_segments.segments} />
+              <RecentUpdates updates={primer.recent_updates.updates} />
             </section>
           )}
 
+          {/* ── 9. PORTER'S FIVE FORCES ─────────────────────────────────────── */}
+          {primer.porter_five_forces && primer.porter_five_forces.forces.length > 0 && (
+            <section className="rounded-lg border border-border bg-card p-4">
+              <h2 className="mb-3 text-sm font-semibold text-foreground">
+                <SourceLink query={`Porter Five Forces ${searchContext}`}>Porter&apos;s Five Forces</SourceLink>
+              </h2>
+              <PorterFiveForces forces={primer.porter_five_forces.forces} />
+            </section>
+          )}
+
+          {/* ── 10. POLICY & REGULATORY ──────────────────────────────────────── */}
           <section className="rounded-lg border border-border bg-card p-4">
             <h2 className="text-sm font-semibold text-foreground">
               <SourceLink query={`Policy & Regulatory Landscape ${searchContext}`}>
@@ -232,85 +261,7 @@ export default async function IndustryPrimerPage({
             </div>
           </section>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <section className="rounded-lg border border-border bg-card p-4">
-              <h2 className="text-sm font-semibold text-foreground">
-                <SourceLink query={`Technology Trends ${searchContext}`}>Technology Trends</SourceLink>
-              </h2>
-              <div className="mt-3">
-                <TaggedCardGrid
-                  items={primer.technology_trends.trends.map((trend) => ({
-                    title: trend.title,
-                    description: trend.description,
-                    tag: trend.maturity,
-                    tagVariant: maturityVariant(trend.maturity),
-                  }))}
-                  searchContext={searchContext}
-                />
-              </div>
-            </section>
-
-            <section className="rounded-lg border border-border bg-card p-4">
-              <h2 className="text-sm font-semibold text-foreground">
-                <SourceLink query={`AI & Digital Integration ${searchContext}`}>AI &amp; Digital Integration</SourceLink>
-              </h2>
-              <div className="mt-3">
-                <TaggedCardGrid
-                  items={primer.ai_digital_integration.use_cases.map((useCase) => ({
-                    title: useCase.title,
-                    description: useCase.description,
-                    tag: `${useCase.impact} impact`,
-                    tagVariant: impactVariant(useCase.impact),
-                  }))}
-                  searchContext={searchContext}
-                />
-              </div>
-            </section>
-          </div>
-
-          <section className="rounded-lg border border-border bg-card p-4">
-            <h2 className="text-sm font-semibold text-foreground">
-              <SourceLink query={`Major Players ${searchContext}`}>Major Players</SourceLink>
-            </h2>
-            <div className="mt-3">
-              <PlayerComparison
-                players={primer.major_players.players}
-                industryName={industry.name}
-                subsectorName={subsector.name}
-                industrySlug={industrySlug}
-                subsectorSlug={subsectorSlug}
-                searchContext={searchContext}
-              />
-            </div>
-          </section>
-
-          <section className="rounded-lg border border-border bg-card p-4">
-            <h2 className="text-sm font-semibold text-foreground">
-              <SourceLink query={`Key Metrics ${searchContext}`}>Key Metrics for Consultants</SourceLink>
-            </h2>
-            <div className="mt-3">
-              <MetricTiles metrics={primer.key_metrics.metrics} searchContext={searchContext} />
-            </div>
-          </section>
-
-          {primer.porter_five_forces && primer.porter_five_forces.forces.length > 0 && (
-            <div className="grid gap-4 lg:grid-cols-2">
-              <section className="rounded-lg border border-border bg-card p-4">
-                <h2 className="mb-3 text-sm font-semibold text-foreground">
-                  <SourceLink query={`Porter Five Forces ${searchContext}`}>Porter&apos;s Five Forces</SourceLink>
-                </h2>
-                <PorterFiveForces forces={primer.porter_five_forces.forces} />
-              </section>
-
-              {primer.business_models && primer.business_models.models.length > 0 && (
-                <section className="rounded-lg border border-border bg-card p-4">
-                  <h2 className="mb-3 text-sm font-semibold text-foreground">Business Models</h2>
-                  <BusinessModelsGrid models={primer.business_models.models} />
-                </section>
-              )}
-            </div>
-          )}
-
+          {/* ── 11. PESTLE ───────────────────────────────────────────────────── */}
           {primer.pestle && primer.pestle.items.length > 0 && (
             <section className="rounded-lg border border-border bg-card p-4">
               <h2 className="mb-3 text-sm font-semibold text-foreground">
@@ -320,6 +271,39 @@ export default async function IndustryPrimerPage({
             </section>
           )}
 
+          {/* ── 12. TECHNOLOGY & DIGITAL (merged) ───────────────────────────── */}
+          <section className="rounded-lg border border-border bg-card p-4">
+            <h2 className="text-sm font-semibold text-foreground">
+              <SourceLink query={`Technology Digital Trends ${searchContext}`}>Technology &amp; Digital</SourceLink>
+            </h2>
+            <div className="mt-3">
+              <TaggedCardGrid
+                items={primer.technology_trends.trends.map((trend) => ({
+                  title: trend.title,
+                  description: trend.description,
+                  tag: trend.maturity,
+                  tagVariant: maturityVariant(trend.maturity),
+                }))}
+                searchContext={searchContext}
+              />
+            </div>
+            {primer.ai_digital_integration.use_cases.length > 0 && (
+              <>
+                <p className="mb-2 mt-4 text-xs font-medium text-muted-foreground">AI &amp; Digital Use Cases</p>
+                <TaggedCardGrid
+                  items={primer.ai_digital_integration.use_cases.map((useCase) => ({
+                    title: useCase.title,
+                    description: useCase.description,
+                    tag: `${useCase.impact} impact`,
+                    tagVariant: impactVariant(useCase.impact),
+                  }))}
+                  searchContext={searchContext}
+                />
+              </>
+            )}
+          </section>
+
+          {/* ── 13. RISK MATRIX ──────────────────────────────────────────────── */}
           {primer.risk_matrix &&
             (primer.risk_matrix.financial.length > 0 || primer.risk_matrix.operational.length > 0) && (
               <section className="rounded-lg border border-border bg-card p-4">
@@ -328,10 +312,22 @@ export default async function IndustryPrimerPage({
               </section>
             )}
 
+          {/* ── 14. KEY METRICS ──────────────────────────────────────────────── */}
           <section className="rounded-lg border border-border bg-card p-4">
+            <h2 className="text-sm font-semibold text-foreground">
+              <SourceLink query={`Key Metrics ${searchContext}`}>Key Metrics for Consultants</SourceLink>
+            </h2>
+            <div className="mt-3">
+              <MetricTiles metrics={primer.key_metrics.metrics} searchContext={searchContext} />
+            </div>
+          </section>
+
+          {/* ── 15. CONSULTING LENS (highlighted — most interview-critical) ───── */}
+          <section className="rounded-lg border border-violet-500/40 bg-violet-500/5 p-4">
             <h2 className="text-sm font-semibold text-foreground">
               <SourceLink query={`Consulting Lens ${searchContext}`}>Consulting Lens</SourceLink>
             </h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">Frameworks &amp; case themes for interview prep</p>
             <div className="mt-3 flex flex-col gap-4">
               <div>
                 <p className="mb-2 text-xs font-medium text-muted-foreground">Applicable Frameworks</p>
@@ -360,10 +356,20 @@ export default async function IndustryPrimerPage({
             </div>
           </section>
 
+          {/* ── 16. Q&A PRACTICE ─────────────────────────────────────────────── */}
           <SectorQaSection
             industryName={industry.name}
             subsectorName={subsector.name}
           />
+
+          {/* ── 17. GLOSSARY (reference — bottom) ───────────────────────────── */}
+          {primer.glossary && primer.glossary.terms.length > 0 && (
+            <section className="rounded-lg border border-border bg-card p-4">
+              <h2 className="mb-1 text-sm font-semibold text-foreground">Industry Terminology</h2>
+              <p className="mb-3 text-xs text-muted-foreground">Reference — key terms and formulas for this sub-sector</p>
+              <GlossaryGrid terms={primer.glossary.terms} />
+            </section>
+          )}
 
           <p className="text-xs text-muted-foreground">
             AI-generated — verify key figures before use in presentations.

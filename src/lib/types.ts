@@ -262,6 +262,7 @@ export interface PrimerMarketSegment {
   name: string;
   description: string;
   examples: string;
+  monetization?: string;
 }
 export interface PrimerMarketSegments {
   segments: PrimerMarketSegment[];
