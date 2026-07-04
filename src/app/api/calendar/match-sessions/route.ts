@@ -38,44 +38,49 @@ async function processRow(
 ): Promise<MatchResult> {
   const base = { eventDate: row.date, eventTime: row.time, eventTitle: row.title };
 
-  const parsed = parseSessionEventTitle(row.title);
-  if (!parsed) return { ...base, subject: null, sessionLabel: null, sector: null, files: [] };
+  try {
+    const parsed = parseSessionEventTitle(row.title);
+    if (!parsed) return { ...base, subject: null, sessionLabel: null, sector: null, files: [] };
 
-  const displayOnly = DISPLAY_ONLY_SUBJECTS[parsed.subjectCode.trim().toLowerCase()];
-  if (displayOnly) return { ...base, subject: displayOnly, sessionLabel: null, sector: null, files: [] };
+    const displayOnly = DISPLAY_ONLY_SUBJECTS[parsed.subjectCode.trim().toLowerCase()];
+    if (displayOnly) return { ...base, subject: displayOnly, sessionLabel: null, sector: null, files: [] };
 
-  const subject = await matchSubjectName(parsed.subjectCode, candidateSubjects);
-  if (!subject) return { ...base, subject: null, sessionLabel: null, sector: null, files: [] };
+    const subject = await matchSubjectName(parsed.subjectCode, candidateSubjects).catch(() => null);
+    if (!subject) return { ...base, subject: null, sessionLabel: null, sector: null, files: [] };
 
-  const drive = await fetchSubjectDriveResources(subject);
-  const sessionGroups = drive.status === "found" ? extractPreReadSessionGroups(drive.files) : [];
+    const drive = await fetchSubjectDriveResources(subject);
+    const sessionGroups = drive.status === "found" ? extractPreReadSessionGroups(drive.files) : [];
 
-  let matchReference = parsed.sessionRef;
-  let sector: string | null = null;
+    let matchReference = parsed.sessionRef;
+    let sector: string | null = null;
 
-  if (subject === SECTOR_OUTLINE_SUBJECT && drive.status === "found") {
-    try {
-      let outlineText = outlineTextCache.get(subject);
-      if (outlineText === undefined) {
-        const outlineFile = drive.files.flatMap((g) => g.files).find((f) => /course outline/i.test(f.name));
-        outlineText = outlineFile ? await extractFileContent(getDriveClient(), outlineFile, 12000) : "";
-        outlineTextCache.set(subject, outlineText);
+    if (subject === SECTOR_OUTLINE_SUBJECT && drive.status === "found") {
+      try {
+        let outlineText = outlineTextCache.get(subject);
+        if (outlineText === undefined) {
+          const outlineFile = drive.files.flatMap((g) => g.files).find((f) => /course outline/i.test(f.name));
+          outlineText = outlineFile ? await extractFileContent(getDriveClient(), outlineFile, 12000) : "";
+          outlineTextCache.set(subject, outlineText);
+        }
+        sector = await extractSectorForSession(outlineText, parsed.sessionRef);
+        if (sector) matchReference = sector;
+      } catch {
+        // Outline extraction failing shouldn't block subject/session matching
       }
-      sector = await extractSectorForSession(outlineText, parsed.sessionRef);
-      if (sector) matchReference = sector;
-    } catch {
-      // Outline extraction failing shouldn't block subject/session matching
     }
+
+    const matchedFolder = await (subject === SECTOR_OUTLINE_SUBJECT && sector
+      ? matchSectorFolder(sector, sessionGroups.map((g) => g.sessionLabel))
+      : matchSessionFolder(matchReference, sessionGroups.map((g) => g.sessionLabel))
+    ).catch(() => null);
+
+    const files = sessionGroups.find((g) => g.sessionLabel === matchedFolder)?.files ?? [];
+    const sessionLabel = matchedFolder ?? parsed.sessionRef.replace(/^session/i, "Session");
+
+    return { ...base, subject, sessionLabel, sector, files };
+  } catch {
+    return { ...base, subject: null, sessionLabel: null, sector: null, files: [] };
   }
-
-  const matchedFolder = subject === SECTOR_OUTLINE_SUBJECT && sector
-    ? await matchSectorFolder(sector, sessionGroups.map((g) => g.sessionLabel))
-    : await matchSessionFolder(matchReference, sessionGroups.map((g) => g.sessionLabel));
-
-  const files = sessionGroups.find((g) => g.sessionLabel === matchedFolder)?.files ?? [];
-  const sessionLabel = matchedFolder ?? parsed.sessionRef.replace(/^session/i, "Session");
-
-  return { ...base, subject, sessionLabel, sector, files };
 }
 
 export async function GET(request: Request) {
