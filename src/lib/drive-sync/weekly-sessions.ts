@@ -32,6 +32,7 @@ export async function fetchWeeklySessionRows(): Promise<RawCalendarRow[] | null>
     const list = await drive.files.list({
       q: `'${rootFolderId}' in parents and name = '${WEEKLY_SESSIONS_FILENAME}' and trashed = false`,
       fields: "files(id, name)",
+      orderBy: "modifiedTime desc",
       pageSize: 1,
     });
     const file = list.data.files?.[0];
