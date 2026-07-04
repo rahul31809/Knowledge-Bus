@@ -160,6 +160,7 @@ export interface PrimerMajorPlayers {
 
 export interface PrimerMetric {
   name: string;
+  formula?: string;
   benchmark: string;
   description: string;
 }
@@ -183,6 +184,78 @@ export interface PrimerConsultingLens {
   case_themes: PrimerCaseTheme[];
 }
 
+// ── New primer sections (added from casebook best-practice analysis) ──────────
+
+export interface PrimerGlossaryTerm {
+  term: string;
+  definition: string;
+  formula?: string;
+}
+export interface PrimerGlossary {
+  terms: PrimerGlossaryTerm[];
+}
+
+export interface PrimerRecentUpdate {
+  headline: string;
+  context: string;
+}
+export interface PrimerRecentUpdates {
+  updates: PrimerRecentUpdate[];
+}
+
+export interface PrimerRevenueItem {
+  stream: string;
+  percentage: string;
+  note: string;
+}
+export interface PrimerCostItem {
+  bucket: string;
+  percentage: string;
+  note: string;
+}
+export interface PrimerRevenueCostBreakdown {
+  revenue: PrimerRevenueItem[];
+  costs: PrimerCostItem[];
+}
+
+export type PorterDegree = "High" | "Medium" | "Low";
+export interface PrimerPorterForce {
+  force: string;
+  degree: PorterDegree;
+  reason: string;
+}
+export interface PrimerPorterFiveForces {
+  forces: PrimerPorterForce[];
+}
+
+export type PestleFactor = "Political" | "Economic" | "Social" | "Technological" | "Environmental" | "Legal";
+export interface PrimerPestleItem {
+  factor: PestleFactor;
+  description: string;
+}
+export interface PrimerPestle {
+  items: PrimerPestleItem[];
+}
+
+export interface PrimerBusinessModel {
+  name: string;
+  description: string;
+}
+export interface PrimerBusinessModels {
+  models: PrimerBusinessModel[];
+}
+
+export interface PrimerRiskItem {
+  title: string;
+  description: string;
+}
+export interface PrimerRiskMatrix {
+  financial: PrimerRiskItem[];
+  operational: PrimerRiskItem[];
+  regulatory: PrimerRiskItem[];
+  technology: PrimerRiskItem[];
+}
+
 export interface IndustryPrimerContent {
   overview: PrimerOverview;
   market_size_growth: PrimerMarketSizeGrowth;
@@ -194,6 +267,14 @@ export interface IndustryPrimerContent {
   major_players: PrimerMajorPlayers;
   key_metrics: PrimerKeyMetrics;
   consulting_lens: PrimerConsultingLens;
+  // Optional — present only in primers generated after the casebook upgrade
+  glossary?: PrimerGlossary;
+  recent_updates?: PrimerRecentUpdates;
+  revenue_cost_breakdown?: PrimerRevenueCostBreakdown;
+  porter_five_forces?: PrimerPorterFiveForces;
+  pestle?: PrimerPestle;
+  business_models?: PrimerBusinessModels;
+  risk_matrix?: PrimerRiskMatrix;
 }
 
 export interface IndustryPrimer extends IndustryPrimerContent {

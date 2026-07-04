@@ -10,6 +10,13 @@ import { StatRow } from "@/components/industry-primer/stat-row";
 import { TaggedCardGrid, impactVariant, maturityVariant } from "@/components/industry-primer/tagged-card-grid";
 import { ValueChainDiagram } from "@/components/industry-primer/value-chain-diagram";
 import { ResetPrimerButton } from "@/components/industry-primer/reset-primer-button";
+import { RecentUpdates } from "@/components/industry-primer/recent-updates";
+import { GlossaryGrid } from "@/components/industry-primer/glossary-grid";
+import { RevenueCostBreakdown } from "@/components/industry-primer/revenue-cost-breakdown";
+import { PorterFiveForces } from "@/components/industry-primer/porter-five-forces";
+import { PestleGrid } from "@/components/industry-primer/pestle-grid";
+import { BusinessModelsGrid } from "@/components/industry-primer/business-models-grid";
+import { RiskMatrixGrid } from "@/components/industry-primer/risk-matrix";
 import { generateIndustryPrimer } from "@/lib/industry-primers/generator";
 import { findSubsector } from "@/lib/industry-taxonomy";
 import { fetchIndustryPrimer, saveIndustryPrimer } from "@/lib/queries";
@@ -94,6 +101,22 @@ export default async function IndustryPrimerPage({
             </div>
           </section>
 
+          {primer.recent_updates && primer.recent_updates.updates.length > 0 && (
+            <section className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
+              <h2 className="mb-3 text-sm font-semibold text-foreground">
+                <SourceLink query={`${subsector.name} India latest news 2025`}>Recent Updates</SourceLink>
+              </h2>
+              <RecentUpdates updates={primer.recent_updates.updates} />
+            </section>
+          )}
+
+          {primer.glossary && primer.glossary.terms.length > 0 && (
+            <section className="rounded-lg border border-border bg-card p-4">
+              <h2 className="mb-3 text-sm font-semibold text-foreground">Industry Terminology</h2>
+              <GlossaryGrid terms={primer.glossary.terms} />
+            </section>
+          )}
+
           <div className="grid gap-4 lg:grid-cols-2">
             <section className="rounded-lg border border-border bg-card p-4">
               <h2 className="text-sm font-semibold text-foreground">
@@ -144,6 +167,18 @@ export default async function IndustryPrimerPage({
               </div>
             </section>
           </div>
+
+          {primer.revenue_cost_breakdown &&
+            (primer.revenue_cost_breakdown.revenue.length > 0 || primer.revenue_cost_breakdown.costs.length > 0) && (
+              <section className="rounded-lg border border-border bg-card p-4">
+                <h2 className="mb-4 text-sm font-semibold text-foreground">
+                  <SourceLink query={`${subsector.name} revenue model cost structure India`}>
+                    Revenue &amp; Cost Breakdown
+                  </SourceLink>
+                </h2>
+                <RevenueCostBreakdown data={primer.revenue_cost_breakdown} />
+              </section>
+            )}
 
           <section className="rounded-lg border border-border bg-card p-4">
             <h2 className="text-sm font-semibold text-foreground">
@@ -233,6 +268,41 @@ export default async function IndustryPrimerPage({
               <MetricTiles metrics={primer.key_metrics.metrics} searchContext={searchContext} />
             </div>
           </section>
+
+          {primer.porter_five_forces && primer.porter_five_forces.forces.length > 0 && (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <section className="rounded-lg border border-border bg-card p-4">
+                <h2 className="mb-3 text-sm font-semibold text-foreground">
+                  <SourceLink query={`Porter Five Forces ${searchContext}`}>Porter&apos;s Five Forces</SourceLink>
+                </h2>
+                <PorterFiveForces forces={primer.porter_five_forces.forces} />
+              </section>
+
+              {primer.business_models && primer.business_models.models.length > 0 && (
+                <section className="rounded-lg border border-border bg-card p-4">
+                  <h2 className="mb-3 text-sm font-semibold text-foreground">Business Models</h2>
+                  <BusinessModelsGrid models={primer.business_models.models} />
+                </section>
+              )}
+            </div>
+          )}
+
+          {primer.pestle && primer.pestle.items.length > 0 && (
+            <section className="rounded-lg border border-border bg-card p-4">
+              <h2 className="mb-3 text-sm font-semibold text-foreground">
+                <SourceLink query={`PESTLE analysis ${searchContext}`}>PESTLE Analysis</SourceLink>
+              </h2>
+              <PestleGrid items={primer.pestle.items} />
+            </section>
+          )}
+
+          {primer.risk_matrix &&
+            (primer.risk_matrix.financial.length > 0 || primer.risk_matrix.operational.length > 0) && (
+              <section className="rounded-lg border border-border bg-card p-4">
+                <h2 className="mb-3 text-sm font-semibold text-foreground">Risk Matrix</h2>
+                <RiskMatrixGrid matrix={primer.risk_matrix} />
+              </section>
+            )}
 
           <section className="rounded-lg border border-border bg-card p-4">
             <h2 className="text-sm font-semibold text-foreground">

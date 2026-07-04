@@ -3,14 +3,23 @@ import type {
   IndustryPrimerContent,
   ImpactLevel,
   Maturity,
+  PorterDegree,
+  PestleFactor,
   PrimerAiDigitalIntegration,
+  PrimerBusinessModels,
   PrimerConsultingLens,
   PrimerFutureOutlook,
+  PrimerGlossary,
   PrimerKeyMetrics,
   PrimerMajorPlayers,
   PrimerMarketSizeGrowth,
   PrimerOverview,
+  PrimerPestle,
   PrimerPolicyRegulatory,
+  PrimerPorterFiveForces,
+  PrimerRecentUpdates,
+  PrimerRevenueCostBreakdown,
+  PrimerRiskMatrix,
   PrimerTechnologyTrends,
   PrimerValueChain,
   ValueCapture,
@@ -158,6 +167,90 @@ function normalizeKeyMetrics(raw: unknown): PrimerKeyMetrics {
   };
 }
 
+function normalizeGlossary(raw: unknown): PrimerGlossary {
+  const obj = isRecord(raw) ? raw : {};
+  return {
+    terms: asArray(obj.terms)
+      .map((t) => ({
+        term: asString(t.term),
+        definition: asString(t.definition),
+        ...(asString(t.formula) ? { formula: asString(t.formula) } : {}),
+      }))
+      .filter((t) => t.term && t.definition),
+  };
+}
+
+function normalizeRecentUpdates(raw: unknown): PrimerRecentUpdates {
+  const obj = isRecord(raw) ? raw : {};
+  return {
+    updates: asArray(obj.updates)
+      .map((u) => ({ headline: asString(u.headline), context: asString(u.context) }))
+      .filter((u) => u.headline),
+  };
+}
+
+function normalizeRevenueCostBreakdown(raw: unknown): PrimerRevenueCostBreakdown {
+  const obj = isRecord(raw) ? raw : {};
+  return {
+    revenue: asArray(obj.revenue)
+      .map((r) => ({ stream: asString(r.stream), percentage: asString(r.percentage), note: asString(r.note) }))
+      .filter((r) => r.stream),
+    costs: asArray(obj.costs)
+      .map((c) => ({ bucket: asString(c.bucket), percentage: asString(c.percentage), note: asString(c.note) }))
+      .filter((c) => c.bucket),
+  };
+}
+
+function normalizePorterFiveForces(raw: unknown): PrimerPorterFiveForces {
+  const obj = isRecord(raw) ? raw : {};
+  const degrees: readonly PorterDegree[] = ["High", "Medium", "Low"];
+  return {
+    forces: asArray(obj.forces)
+      .map((f) => ({
+        force: asString(f.force),
+        degree: asEnum(f.degree, degrees, "Medium"),
+        reason: asString(f.reason),
+      }))
+      .filter((f) => f.force),
+  };
+}
+
+function normalizePestle(raw: unknown): PrimerPestle {
+  const obj = isRecord(raw) ? raw : {};
+  const factors: readonly PestleFactor[] = ["Political", "Economic", "Social", "Technological", "Environmental", "Legal"];
+  return {
+    items: asArray(obj.items)
+      .map((i) => ({
+        factor: asEnum(i.factor, factors, "Political"),
+        description: asString(i.description),
+      }))
+      .filter((i) => i.description),
+  };
+}
+
+function normalizeBusinessModels(raw: unknown): PrimerBusinessModels {
+  const obj = isRecord(raw) ? raw : {};
+  return {
+    models: asArray(obj.models)
+      .map((m) => ({ name: asString(m.name), description: asString(m.description) }))
+      .filter((m) => m.name),
+  };
+}
+
+function normalizeRiskMatrix(raw: unknown): PrimerRiskMatrix {
+  const toItems = (v: unknown) =>
+    asArray(v)
+      .map((r) => ({ title: asString(r.title), description: asString(r.description) }))
+      .filter((r) => r.title);
+  const obj = isRecord(raw) ? raw : {};
+  return {
+    financial: toItems(obj.financial),
+    operational: toItems(obj.operational),
+    regulatory: toItems(obj.regulatory),
+    technology: toItems(obj.technology),
+  };
+}
+
 function normalizeConsultingLens(raw: unknown): PrimerConsultingLens {
   const obj = isRecord(raw) ? raw : {};
   return {
@@ -262,6 +355,62 @@ Return a single JSON object with exactly this structure. The strings and numbers
     "case_themes": [
       {"title": "Likely case theme", "description": "1 sentence on what the case would explore"}
     ]
+  },
+  "glossary": {
+    "terms": [
+      {"term": "Industry jargon or KPI acronym", "definition": "Plain-English 1-sentence definition", "formula": "Formula/calculation if there is one, e.g. PLF = RPM / ASM × 100 — omit this field entirely if no formula exists"}
+    ]
+  },
+  "recent_updates": {
+    "updates": [
+      {"headline": "Specific 2024-2025 news headline about this sub-sector in India", "context": "1 sentence on why this matters for the sector or for a consulting case"}
+    ]
+  },
+  "revenue_cost_breakdown": {
+    "revenue": [
+      {"stream": "Revenue stream name", "percentage": "~40%", "note": "Brief 1-line note on this stream"}
+    ],
+    "costs": [
+      {"bucket": "Cost bucket name", "percentage": "~35%", "note": "Brief 1-line note"}
+    ]
+  },
+  "porter_five_forces": {
+    "forces": [
+      {"force": "Threat of New Entrants", "degree": "Low", "reason": "1-sentence reason specific to this sub-sector"},
+      {"force": "Bargaining Power of Suppliers", "degree": "High", "reason": "1-sentence reason"},
+      {"force": "Bargaining Power of Buyers", "degree": "Medium", "reason": "1-sentence reason"},
+      {"force": "Threat of Substitutes", "degree": "Low", "reason": "1-sentence reason"},
+      {"force": "Competitive Rivalry", "degree": "High", "reason": "1-sentence reason"}
+    ]
+  },
+  "pestle": {
+    "items": [
+      {"factor": "Political", "description": "2-3 sentences on relevant political factors in India for this sub-sector"},
+      {"factor": "Economic", "description": "2-3 sentences"},
+      {"factor": "Social", "description": "2-3 sentences"},
+      {"factor": "Technological", "description": "2-3 sentences"},
+      {"factor": "Environmental", "description": "2-3 sentences"},
+      {"factor": "Legal", "description": "2-3 sentences"}
+    ]
+  },
+  "business_models": {
+    "models": [
+      {"name": "Business model name", "description": "2-3 sentences on how this model works, who uses it, and how they monetize"}
+    ]
+  },
+  "risk_matrix": {
+    "financial": [
+      {"title": "Risk name", "description": "1-sentence description of the risk and its impact"}
+    ],
+    "operational": [
+      {"title": "Risk name", "description": "1-sentence description"}
+    ],
+    "regulatory": [
+      {"title": "Risk name", "description": "1-sentence description"}
+    ],
+    "technology": [
+      {"title": "Risk name", "description": "1-sentence description"}
+    ]
   }
 }
 
@@ -276,8 +425,15 @@ Requirements:
 - "technology_trends.trends" needs 4-6 items; "maturity" must be "emerging", "scaling", or "mainstream".
 - "ai_digital_integration.use_cases" needs 4-6 items; "impact" must be "high", "medium", or "low".
 - "major_players.players" needs 5-8 items; "origin" must be "Indian" or "Global".
-- "key_metrics.metrics" needs 5-6 items.
+- "key_metrics.metrics" needs 5-7 items; include "formula" only when there is an actual calculation.
 - "consulting_lens.frameworks" needs 2-4 items; "consulting_lens.case_themes" needs 2-3 items.
+- "glossary.terms" needs 6-9 terms; include "formula" only when applicable.
+- "recent_updates.updates" needs 4-6 items from 2024-2025.
+- "revenue_cost_breakdown.revenue" needs 3-5 streams; "costs" needs 3-5 buckets; percentages are approximate.
+- "porter_five_forces.forces" must have exactly 5 items in this exact order: Threat of New Entrants, Bargaining Power of Suppliers, Bargaining Power of Buyers, Threat of Substitutes, Competitive Rivalry; "degree" must be "High", "Medium", or "Low".
+- "pestle.items" must have exactly 6 items, one for each: Political, Economic, Social, Technological, Environmental, Legal; "factor" must match exactly.
+- "business_models.models" needs 2-4 items.
+- "risk_matrix.financial", "risk_matrix.operational", "risk_matrix.regulatory", "risk_matrix.technology" each need 2-3 items.
 - Be specific and quantitative. Output ONLY the JSON object, no commentary, no markdown fences.`;
 
   const result = await ai.models.generateContent({
@@ -304,5 +460,12 @@ Requirements:
     major_players: normalizeMajorPlayers(parsed.major_players),
     key_metrics: normalizeKeyMetrics(parsed.key_metrics),
     consulting_lens: normalizeConsultingLens(parsed.consulting_lens),
+    glossary: normalizeGlossary(parsed.glossary),
+    recent_updates: normalizeRecentUpdates(parsed.recent_updates),
+    revenue_cost_breakdown: normalizeRevenueCostBreakdown(parsed.revenue_cost_breakdown),
+    porter_five_forces: normalizePorterFiveForces(parsed.porter_five_forces),
+    pestle: normalizePestle(parsed.pestle),
+    business_models: normalizeBusinessModels(parsed.business_models),
+    risk_matrix: normalizeRiskMatrix(parsed.risk_matrix),
   };
 }
