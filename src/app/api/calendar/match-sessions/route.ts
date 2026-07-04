@@ -4,7 +4,7 @@ import { createClient as createSessionClient } from "@/lib/supabase/server";
 import { extractPreReadSessionGroups, fetchDriveSubjectNames, fetchSubjectDriveResources, getDriveClient } from "@/lib/drive-sync/client";
 import { extractFileContent } from "@/lib/drive-sync/tagger";
 import { fetchWeeklySessionRows } from "@/lib/drive-sync/weekly-sessions";
-import { extractSectorForSession, matchSessionFolder, matchSubjectName, parseSessionEventTitle } from "@/lib/calendar/session-matcher";
+import { extractSectorForSession, matchSectorFolder, matchSessionFolder, matchSubjectName, parseSessionEventTitle } from "@/lib/calendar/session-matcher";
 
 export const maxDuration = 120;
 
@@ -105,7 +105,9 @@ export async function GET(request: Request) {
       }
     }
 
-    const matchedFolder = await matchSessionFolder(matchReference, sessionGroups.map((g) => g.sessionLabel));
+    const matchedFolder = subject === SECTOR_OUTLINE_SUBJECT && sector
+      ? await matchSectorFolder(sector, sessionGroups.map((g) => g.sessionLabel))
+      : await matchSessionFolder(matchReference, sessionGroups.map((g) => g.sessionLabel));
     const files = sessionGroups.find((g) => g.sessionLabel === matchedFolder)?.files ?? [];
     // Fall back to the raw "Session N & M" reference parsed from the
     // calendar title when no Drive folder matched — better to show the

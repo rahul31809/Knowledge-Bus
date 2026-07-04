@@ -76,6 +76,18 @@ export async function matchSessionFolder(sessionRef: string, candidateFolders: s
   );
 }
 
+// Sector Strategic Analysis organises Pre Reads by sector name, not session
+// number. The sector name extracted from the course outline (e.g. "Software
+// Products / Services") may differ in punctuation from the Drive folder name
+// (e.g. "Software Products and Services") — use a semantic prompt so Gemini
+// can bridge that gap rather than doing a string-equality check.
+export async function matchSectorFolder(sectorName: string, candidateFolders: string[]): Promise<string | null> {
+  return pickBestMatch(
+    `The sector being studied is "${sectorName}". Which of these Drive folder names refers to the same sector? Treat "/" and "and" as equivalent (e.g. "Software Products / Services" matches "Software Products and Services").`,
+    candidateFolders
+  );
+}
+
 // Exception for subjects whose Course Outline lists a session-to-sector
 // table (Pre Reads is organized by sector, not session number) — e.g.
 // "Sector Strategic Analysis", where session 23-24 maps to "Software
