@@ -31,6 +31,53 @@ interface MatchResult {
   files: { id: string; name: string; mimeType: string; webViewLink: string }[];
 }
 
+async function processRow(
+  row: { date: string; time: string | null; title: string },
+  candidateSubjects: string[],
+  outlineTextCache: Map<string, string>
+): Promise<MatchResult> {
+  const base = { eventDate: row.date, eventTime: row.time, eventTitle: row.title };
+
+  const parsed = parseSessionEventTitle(row.title);
+  if (!parsed) return { ...base, subject: null, sessionLabel: null, sector: null, files: [] };
+
+  const displayOnly = DISPLAY_ONLY_SUBJECTS[parsed.subjectCode.trim().toLowerCase()];
+  if (displayOnly) return { ...base, subject: displayOnly, sessionLabel: null, sector: null, files: [] };
+
+  const subject = await matchSubjectName(parsed.subjectCode, candidateSubjects);
+  if (!subject) return { ...base, subject: null, sessionLabel: null, sector: null, files: [] };
+
+  const drive = await fetchSubjectDriveResources(subject);
+  const sessionGroups = drive.status === "found" ? extractPreReadSessionGroups(drive.files) : [];
+
+  let matchReference = parsed.sessionRef;
+  let sector: string | null = null;
+
+  if (subject === SECTOR_OUTLINE_SUBJECT && drive.status === "found") {
+    try {
+      let outlineText = outlineTextCache.get(subject);
+      if (outlineText === undefined) {
+        const outlineFile = drive.files.flatMap((g) => g.files).find((f) => /course outline/i.test(f.name));
+        outlineText = outlineFile ? await extractFileContent(getDriveClient(), outlineFile, 12000) : "";
+        outlineTextCache.set(subject, outlineText);
+      }
+      sector = await extractSectorForSession(outlineText, parsed.sessionRef);
+      if (sector) matchReference = sector;
+    } catch {
+      // Outline extraction failing shouldn't block subject/session matching
+    }
+  }
+
+  const matchedFolder = subject === SECTOR_OUTLINE_SUBJECT && sector
+    ? await matchSectorFolder(sector, sessionGroups.map((g) => g.sessionLabel))
+    : await matchSessionFolder(matchReference, sessionGroups.map((g) => g.sessionLabel));
+
+  const files = sessionGroups.find((g) => g.sessionLabel === matchedFolder)?.files ?? [];
+  const sessionLabel = matchedFolder ?? parsed.sessionRef.replace(/^session/i, "Session");
+
+  return { ...base, subject, sessionLabel, sector, files };
+}
+
 export async function GET(request: Request) {
   const cronSecret = process.env.CRON_SECRET;
   const authHeader = request.headers.get("authorization");
@@ -60,62 +107,13 @@ export async function GET(request: Request) {
 
   const sessionRows = rows.filter((r) => /session/i.test(r.title));
 
-  const results: MatchResult[] = [];
-  let candidateSubjects: string[] | null = null;
+  // Fetch candidate subjects once upfront, then process all sessions in parallel
+  const candidateSubjects = (await fetchDriveSubjectNames()) ?? [];
   const outlineTextCache = new Map<string, string>();
 
-  for (const row of sessionRows) {
-    const parsed = parseSessionEventTitle(row.title);
-    if (!parsed) {
-      results.push({ eventDate: row.date, eventTime: row.time, eventTitle: row.title, subject: null, sessionLabel: null, sector: null, files: [] });
-      continue;
-    }
-
-    const displayOnly = DISPLAY_ONLY_SUBJECTS[parsed.subjectCode.trim().toLowerCase()];
-    if (displayOnly) {
-      results.push({ eventDate: row.date, eventTime: row.time, eventTitle: row.title, subject: displayOnly, sessionLabel: null, sector: null, files: [] });
-      continue;
-    }
-
-    candidateSubjects ??= (await fetchDriveSubjectNames()) ?? [];
-    const subject = await matchSubjectName(parsed.subjectCode, candidateSubjects);
-    if (!subject) {
-      results.push({ eventDate: row.date, eventTime: row.time, eventTitle: row.title, subject: null, sessionLabel: null, sector: null, files: [] });
-      continue;
-    }
-
-    const drive = await fetchSubjectDriveResources(subject);
-    const sessionGroups = drive.status === "found" ? extractPreReadSessionGroups(drive.files) : [];
-
-    let matchReference = parsed.sessionRef;
-    let sector: string | null = null;
-
-    if (subject === SECTOR_OUTLINE_SUBJECT && drive.status === "found") {
-      try {
-        let outlineText = outlineTextCache.get(subject);
-        if (outlineText === undefined) {
-          const outlineFile = drive.files.flatMap((g) => g.files).find((f) => /course outline/i.test(f.name));
-          outlineText = outlineFile ? await extractFileContent(getDriveClient(), outlineFile, 12000) : "";
-          outlineTextCache.set(subject, outlineText);
-        }
-        sector = await extractSectorForSession(outlineText, parsed.sessionRef);
-        if (sector) matchReference = sector;
-      } catch {
-        // Outline extraction failing shouldn't block subject/session matching
-      }
-    }
-
-    const matchedFolder = subject === SECTOR_OUTLINE_SUBJECT && sector
-      ? await matchSectorFolder(sector, sessionGroups.map((g) => g.sessionLabel))
-      : await matchSessionFolder(matchReference, sessionGroups.map((g) => g.sessionLabel));
-    const files = sessionGroups.find((g) => g.sessionLabel === matchedFolder)?.files ?? [];
-    // Fall back to the raw "Session N & M" reference parsed from the
-    // calendar title when no Drive folder matched — better to show the
-    // session number than nothing at all, even with no pre-reads to link.
-    const sessionLabel = matchedFolder ?? parsed.sessionRef.replace(/^session/i, "Session");
-
-    results.push({ eventDate: row.date, eventTime: row.time, eventTitle: row.title, subject, sessionLabel, sector, files });
-  }
+  const results = await Promise.all(
+    sessionRows.map((row) => processRow(row, candidateSubjects, outlineTextCache))
+  );
 
   // The Excel represents the full current week each time it's regenerated —
   // a full replace keeps the table from accumulating stale rows from
