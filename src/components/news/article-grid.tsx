@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Loader2Icon, SparklesIcon } from "lucide-react";
 import { Markdown } from "@/components/industry-primer/markdown";
 import type { NewsArticle } from "@/lib/types";
@@ -18,6 +18,26 @@ export function ArticleGrid({ articles, emptyMessage, heroCount = 0, showCategor
   const [summary, setSummary] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeSources, setActiveSources] = useState<Set<string>>(new Set());
+
+  const sources = useMemo(() => {
+    const seen = new Set<string>();
+    for (const a of articles) if (a.source) seen.add(a.source);
+    return Array.from(seen).sort();
+  }, [articles]);
+
+  function toggleSource(source: string) {
+    setActiveSources((prev) => {
+      const next = new Set(prev);
+      if (next.has(source)) next.delete(source);
+      else next.add(source);
+      return next;
+    });
+  }
+
+  const visibleArticles = activeSources.size === 0
+    ? articles
+    : articles.filter((a) => activeSources.has(a.source));
 
   function handleSelectToggle(id: string) {
     setSelectedId((prev) => (prev === id ? null : id));
@@ -56,12 +76,45 @@ export function ArticleGrid({ articles, emptyMessage, heroCount = 0, showCategor
     );
   }
 
-  const heroArticles = articles.slice(0, heroCount);
-  const gridArticles = articles.slice(heroCount);
+  const heroArticles = visibleArticles.slice(0, heroCount);
+  const gridArticles = visibleArticles.slice(heroCount);
   const selectedArticle = articles.find((a) => a.id === selectedId);
 
   return (
     <div className="flex flex-col gap-5">
+      {sources.length > 1 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground">Source:</span>
+          {sources.map((source) => {
+            const active = activeSources.has(source);
+            return (
+              <button
+                key={source}
+                type="button"
+                onClick={() => toggleSource(source)}
+                className={[
+                  "rounded-full border px-3 py-1 text-xs transition-colors",
+                  active
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground",
+                ].join(" ")}
+              >
+                {source}
+              </button>
+            );
+          })}
+          {activeSources.size > 0 && (
+            <button
+              type="button"
+              onClick={() => setActiveSources(new Set())}
+              className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm font-medium text-foreground">
@@ -88,6 +141,12 @@ export function ArticleGrid({ articles, emptyMessage, heroCount = 0, showCategor
           </div>
         ) : null}
       </div>
+
+      {visibleArticles.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground">
+          No articles from the selected source{activeSources.size > 1 ? "s" : ""}.
+        </div>
+      ) : null}
 
       {heroArticles.length > 0 ? (
         <div className="flex flex-col gap-4">
