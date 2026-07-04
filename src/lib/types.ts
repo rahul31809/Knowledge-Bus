@@ -99,6 +99,7 @@ export interface PrimerFutureOutlook {
   trend_unit: string;
   comparison: PrimerTrendPoint[];
   drivers: PrimerDriver[];
+  challenges?: PrimerDriver[];
 }
 
 export type ValueCapture = "high" | "medium" | "low";
@@ -107,6 +108,7 @@ export interface PrimerValueChainStage {
   name: string;
   description: string;
   value_capture: ValueCapture;
+  activities?: string[];
 }
 
 export interface PrimerValueChain {
@@ -256,6 +258,15 @@ export interface PrimerRiskMatrix {
   technology: PrimerRiskItem[];
 }
 
+export interface PrimerMarketSegment {
+  name: string;
+  description: string;
+  examples: string;
+}
+export interface PrimerMarketSegments {
+  segments: PrimerMarketSegment[];
+}
+
 export interface IndustryPrimerContent {
   overview: PrimerOverview;
   market_size_growth: PrimerMarketSizeGrowth;
@@ -275,6 +286,7 @@ export interface IndustryPrimerContent {
   pestle?: PrimerPestle;
   business_models?: PrimerBusinessModels;
   risk_matrix?: PrimerRiskMatrix;
+  market_segments?: PrimerMarketSegments;
 }
 
 export interface IndustryPrimer extends IndustryPrimerContent {

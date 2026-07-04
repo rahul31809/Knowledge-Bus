@@ -40,6 +40,16 @@ export function ValueChainDiagram({
               <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
                 {stage.description}
               </p>
+              {stage.activities && stage.activities.length > 0 && (
+                <ul className="mt-2 flex flex-col gap-0.5">
+                  {stage.activities.map((act) => (
+                    <li key={act} className="flex items-start gap-1 text-[10px] text-muted-foreground">
+                      <span className="mt-px shrink-0 text-muted-foreground/50">·</span>
+                      {act}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
             {index < stages.length - 1 ? (
               <div className="hidden shrink-0 items-center sm:flex">

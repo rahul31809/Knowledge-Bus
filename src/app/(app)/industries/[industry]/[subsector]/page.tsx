@@ -17,6 +17,7 @@ import { PorterFiveForces } from "@/components/industry-primer/porter-five-force
 import { PestleGrid } from "@/components/industry-primer/pestle-grid";
 import { BusinessModelsGrid } from "@/components/industry-primer/business-models-grid";
 import { RiskMatrixGrid } from "@/components/industry-primer/risk-matrix";
+import { MarketSegmentsGrid } from "@/components/industry-primer/market-segments-grid";
 import { generateIndustryPrimer } from "@/lib/industry-primers/generator";
 import { findSubsector } from "@/lib/industry-taxonomy";
 import { fetchIndustryPrimer, saveIndustryPrimer } from "@/lib/queries";
@@ -141,9 +142,7 @@ export default async function IndustryPrimerPage({
 
             <section className="rounded-lg border border-border bg-card p-4">
               <h2 className="text-sm font-semibold text-foreground">
-                <SourceLink query={`Future Outlook & Growth Drivers ${searchContext}`}>
-                  Future Outlook &amp; Growth Drivers
-                </SourceLink>
+                <SourceLink query={`Future Outlook ${searchContext}`}>Future Outlook</SourceLink>
               </h2>
               <div className="mt-3">
                 <StatRow
@@ -156,17 +155,33 @@ export default async function IndustryPrimerPage({
               <div className="mt-4">
                 <BarChart data={primer.future_outlook.comparison} unit={primer.future_outlook.trend_unit} />
               </div>
-              <div className="mt-3">
-                <TaggedCardGrid
-                  items={primer.future_outlook.drivers.map((driver) => ({
-                    title: driver.title,
-                    description: driver.description,
-                  }))}
-                  searchContext={searchContext}
-                />
-              </div>
             </section>
           </div>
+
+          {(primer.future_outlook.drivers.length > 0 || (primer.future_outlook.challenges && primer.future_outlook.challenges.length > 0)) && (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {primer.future_outlook.drivers.length > 0 && (
+                <section className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4">
+                  <h2 className="mb-3 text-sm font-semibold text-foreground">
+                    <SourceLink query={`Growth Drivers ${searchContext}`}>Growth Drivers</SourceLink>
+                  </h2>
+                  <TaggedCardGrid
+                    items={primer.future_outlook.drivers.map((d) => ({ title: d.title, description: d.description }))}
+                    searchContext={searchContext}
+                  />
+                </section>
+              )}
+              {primer.future_outlook.challenges && primer.future_outlook.challenges.length > 0 && (
+                <section className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-4">
+                  <h2 className="mb-3 text-sm font-semibold text-foreground">Challenges &amp; Headwinds</h2>
+                  <TaggedCardGrid
+                    items={primer.future_outlook.challenges.map((c) => ({ title: c.title, description: c.description }))}
+                    searchContext={searchContext}
+                  />
+                </section>
+              )}
+            </div>
+          )}
 
           {primer.revenue_cost_breakdown &&
             (primer.revenue_cost_breakdown.revenue.length > 0 || primer.revenue_cost_breakdown.costs.length > 0) && (
@@ -188,6 +203,15 @@ export default async function IndustryPrimerPage({
               <ValueChainDiagram stages={primer.value_chain.stages} searchContext={searchContext} />
             </div>
           </section>
+
+          {primer.market_segments && primer.market_segments.segments.length > 0 && (
+            <section className="rounded-lg border border-border bg-card p-4">
+              <h2 className="mb-3 text-sm font-semibold text-foreground">
+                <SourceLink query={`${subsector.name} market segments India`}>Market Segments</SourceLink>
+              </h2>
+              <MarketSegmentsGrid segments={primer.market_segments.segments} />
+            </section>
+          )}
 
           <section className="rounded-lg border border-border bg-card p-4">
             <h2 className="text-sm font-semibold text-foreground">

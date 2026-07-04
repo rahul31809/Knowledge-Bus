@@ -12,6 +12,7 @@ import type {
   PrimerGlossary,
   PrimerKeyMetrics,
   PrimerMajorPlayers,
+  PrimerMarketSegments,
   PrimerMarketSizeGrowth,
   PrimerOverview,
   PrimerPestle,
@@ -72,6 +73,9 @@ function normalizeMarketSizeGrowth(raw: unknown): PrimerMarketSizeGrowth {
 
 function normalizeFutureOutlook(raw: unknown): PrimerFutureOutlook {
   const obj = isRecord(raw) ? raw : {};
+  const challenges = asArray(obj.challenges)
+    .map((d) => ({ title: asString(d.title), description: asString(d.description) }))
+    .filter((d) => d.title);
   return {
     projection_label: asString(obj.projection_label),
     projected_cagr_label: asString(obj.projected_cagr_label),
@@ -82,6 +86,7 @@ function normalizeFutureOutlook(raw: unknown): PrimerFutureOutlook {
     drivers: asArray(obj.drivers)
       .map((d) => ({ title: asString(d.title), description: asString(d.description) }))
       .filter((d) => d.title),
+    ...(challenges.length > 0 ? { challenges } : {}),
   };
 }
 
@@ -90,11 +95,17 @@ function normalizeValueChain(raw: unknown): PrimerValueChain {
   const captures: readonly ValueCapture[] = ["high", "medium", "low"];
   return {
     stages: asArray(obj.stages)
-      .map((s) => ({
-        name: asString(s.name),
-        description: asString(s.description),
-        value_capture: asEnum(s.value_capture, captures, "medium"),
-      }))
+      .map((s) => {
+        const activities = Array.isArray(s.activities)
+          ? (s.activities as unknown[]).map((a) => asString(a)).filter(Boolean)
+          : [];
+        return {
+          name: asString(s.name),
+          description: asString(s.description),
+          value_capture: asEnum(s.value_capture, captures, "medium"),
+          ...(activities.length > 0 ? { activities } : {}),
+        };
+      })
       .filter((s) => s.name),
   };
 }
@@ -251,6 +262,19 @@ function normalizeRiskMatrix(raw: unknown): PrimerRiskMatrix {
   };
 }
 
+function normalizeMarketSegments(raw: unknown): PrimerMarketSegments {
+  const obj = isRecord(raw) ? raw : {};
+  return {
+    segments: asArray(obj.segments)
+      .map((s) => ({
+        name: asString(s.name),
+        description: asString(s.description),
+        examples: asString(s.examples),
+      }))
+      .filter((s) => s.name && s.description),
+  };
+}
+
 function normalizeConsultingLens(raw: unknown): PrimerConsultingLens {
   const obj = isRecord(raw) ? raw : {};
   return {
@@ -315,12 +339,25 @@ Return a single JSON object with exactly this structure. The strings and numbers
       {"label": "Projected (FY30)", "value": 160}
     ],
     "drivers": [
-      {"title": "Driver name", "description": "1 sentence explanation"}
+      {"title": "Growth driver name", "description": "1 sentence explanation of why this is a tailwind"}
+    ],
+    "challenges": [
+      {"title": "Challenge or headwind name", "description": "1 sentence explanation of why this is a headwind or risk to growth"}
     ]
   },
   "value_chain": {
     "stages": [
-      {"name": "Stage name", "description": "1 sentence on what happens at this stage", "value_capture": "high"}
+      {
+        "name": "Stage name",
+        "description": "1 sentence on what happens at this stage",
+        "value_capture": "high",
+        "activities": ["Specific activity 1", "Specific activity 2", "Specific activity 3"]
+      }
+    ]
+  },
+  "market_segments": {
+    "segments": [
+      {"name": "Segment name", "description": "1-2 sentences on what defines this segment and who plays in it", "examples": "2-3 example companies or players"}
     ]
   },
   "policy_regulatory": {
@@ -434,6 +471,9 @@ Requirements:
 - "pestle.items" must have exactly 6 items, one for each: Political, Economic, Social, Technological, Environmental, Legal; "factor" must match exactly.
 - "business_models.models" needs 2-4 items.
 - "risk_matrix.financial", "risk_matrix.operational", "risk_matrix.regulatory", "risk_matrix.technology" each need 2-3 items.
+- "future_outlook.drivers" needs 3-4 items (growth tailwinds); "future_outlook.challenges" needs 3-4 items (headwinds and risks) — keep them clearly separate.
+- "value_chain.stages[].activities" needs 3-5 specific named activities per stage (e.g. for Airlines: "Route Planning", "Slot Allocation", "Fleet Scheduling" — not abstract descriptions).
+- "market_segments.segments" needs 3-5 segments that represent distinct player types or customer categories in this sub-sector; "examples" should name real companies or identifiable players.
 - Be specific and quantitative. Output ONLY the JSON object, no commentary, no markdown fences.`;
 
   const result = await ai.models.generateContent({
@@ -467,5 +507,6 @@ Requirements:
     pestle: normalizePestle(parsed.pestle),
     business_models: normalizeBusinessModels(parsed.business_models),
     risk_matrix: normalizeRiskMatrix(parsed.risk_matrix),
+    market_segments: normalizeMarketSegments(parsed.market_segments),
   };
 }
