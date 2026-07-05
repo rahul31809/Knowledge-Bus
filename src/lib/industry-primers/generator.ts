@@ -478,11 +478,15 @@ Requirements:
 - "future_outlook.drivers" needs 3-4 items (growth tailwinds); "future_outlook.challenges" needs 3-4 items (headwinds and risks) — keep them clearly separate.
 - "value_chain.stages[].activities" needs 3-5 specific named activities per stage (e.g. for Airlines: "Route Planning", "Slot Allocation", "Fleet Scheduling" — not abstract descriptions).
 - "market_segments.segments" needs 3-5 segments that represent distinct player types or customer categories in this sub-sector; "examples" should name real companies or identifiable players; "monetization" should describe the primary revenue model for that segment type.
-- Be specific and quantitative. Output ONLY the JSON object, no commentary, no markdown fences.`;
+- Be specific and quantitative. Output ONLY the JSON object, no commentary, no markdown fences, no inline citations or source markers.`;
 
   const result = await ai.models.generateContent({
-    model: "gemini-3.1-flash-lite",
+    model: "gemini-2.5-flash",
     contents: prompt,
+    config: {
+      tools: [{ googleSearch: {} }],
+      thinkingConfig: { thinkingBudget: 0 },
+    },
   });
 
   const text = result.text ?? "";
