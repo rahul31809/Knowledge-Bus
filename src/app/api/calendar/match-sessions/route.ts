@@ -74,7 +74,27 @@ async function processRow(
       : matchSessionFolder(matchReference, sessionGroups.map((g) => g.sessionLabel))
     ).catch(() => null);
 
-    const files = sessionGroups.find((g) => g.sessionLabel === matchedFolder)?.files ?? [];
+    let files = sessionGroups.find((g) => g.sessionLabel === matchedFolder)?.files ?? [];
+
+    // Fallback: when a combined session ref (e.g. "Session 7 & 8") has no
+    // single Drive folder that covers all sessions, Gemini returns null.
+    // Collect files from each individual session number instead.
+    if (files.length === 0 && !matchedFolder && sessionGroups.length > 0) {
+      const sessionNums = parsed.sessionRef.match(/\d+/g) ?? [];
+      const seen = new Set<string>();
+      files = [];
+      for (const num of sessionNums) {
+        const re = new RegExp(`\\b${num}\\b`);
+        for (const group of sessionGroups) {
+          if (re.test(group.sessionLabel)) {
+            for (const f of group.files) {
+              if (!seen.has(f.id)) { files.push(f); seen.add(f.id); }
+            }
+          }
+        }
+      }
+    }
+
     const sessionLabel = matchedFolder ?? parsed.sessionRef.replace(/^session/i, "Session");
 
     return { ...base, subject, sessionLabel, sector, files };
