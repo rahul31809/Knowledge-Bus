@@ -51,7 +51,13 @@ export default async function IndustryPrimerPage({
         content
       );
     } catch (err) {
-      generationError = err instanceof Error ? err.message : "Failed to generate primer";
+      if (err instanceof Error) {
+        generationError = err.message;
+      } else if (typeof err === "object" && err !== null && "message" in err) {
+        generationError = String((err as Record<string, unknown>).message);
+      } else {
+        generationError = String(err);
+      }
     }
   }
 

@@ -485,7 +485,6 @@ Requirements:
     contents: prompt,
     config: {
       tools: [{ googleSearch: {} }],
-      thinkingConfig: { thinkingBudget: 0 },
     },
   });
 
