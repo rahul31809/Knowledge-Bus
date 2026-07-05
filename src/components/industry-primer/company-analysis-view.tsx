@@ -11,7 +11,13 @@ function splitTitle(title: string): { number: string; label: string } {
   return { number: title.slice(0, dotIdx), label: title.slice(dotIdx + 2) };
 }
 
-export function CompanyAnalysisView({ analysis }: { analysis: CompanyAnalysis }) {
+export function CompanyAnalysisView({
+  analysis,
+  layout = "grid",
+}: {
+  analysis: CompanyAnalysis;
+  layout?: "grid" | "sidebar";
+}) {
   const sections: CompanyAnalysisSection[] = [
     ...analysis.chunk_foundation.sections,
     ...analysis.chunk_market.sections,
@@ -32,6 +38,54 @@ export function CompanyAnalysisView({ analysis }: { analysis: CompanyAnalysis })
 
   const active = sections[Math.min(activeIndex, sections.length - 1)];
 
+  if (layout === "sidebar") {
+    return (
+      <div className="flex h-full min-h-0">
+        {/* Section list */}
+        <nav className="w-44 shrink-0 overflow-y-auto border-r border-border py-1">
+          {sections.map((section, i) => {
+            const { number, label } = splitTitle(section.title);
+            const isActive = i === activeIndex;
+            return (
+              <button
+                key={section.title}
+                type="button"
+                onClick={() => setActiveIndex(i)}
+                className={cn(
+                  "w-full px-3 py-2.5 text-left transition-colors",
+                  isActive
+                    ? "bg-accent"
+                    : "hover:bg-muted/60"
+                )}
+              >
+                <span className={cn("block text-[10px] font-medium tabular-nums", isActive ? "text-primary" : "text-muted-foreground/50")}>
+                  {number.padStart(2, "0")}
+                </span>
+                <span className={cn("mt-0.5 block text-xs leading-snug", isActive ? "font-semibold text-foreground" : "text-muted-foreground")}>
+                  {label}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Section content */}
+        <div className="flex-1 overflow-y-auto px-5 py-5">
+          <p className="text-[10px] font-medium uppercase tracking-widest text-primary">
+            {splitTitle(active.title).number.padStart(2, "0")}
+          </p>
+          <h2 className="mt-1 font-serif text-lg font-semibold text-foreground">
+            {splitTitle(active.title).label}
+          </h2>
+          <div className="mt-4">
+            <Markdown>{active.markdown}</Markdown>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Grid layout — used on the full company page
   return (
     <div className="flex flex-col gap-5">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">

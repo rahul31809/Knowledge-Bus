@@ -789,16 +789,16 @@ export function PlayerComparison({
             <SheetTitle>{sheetCompany ?? "Company Analysis"}</SheetTitle>
             <SheetClose />
           </SheetHeader>
-          <div className="flex-1 overflow-y-auto px-5 py-5">
+          <div className="flex-1 min-h-0 overflow-hidden">
             {sheetLoading ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 p-5 text-sm text-muted-foreground">
                 <Loader2Icon className="size-4 animate-spin" />
                 Generating analysis — this takes ~30s…
               </div>
             ) : sheetError ? (
-              <p className="text-sm text-destructive">{sheetError}</p>
+              <p className="p-5 text-sm text-destructive">{sheetError}</p>
             ) : sheetAnalysis ? (
-              <CompanyAnalysisView analysis={sheetAnalysis} />
+              <CompanyAnalysisView analysis={sheetAnalysis} layout="sidebar" />
             ) : null}
           </div>
         </SheetContent>
