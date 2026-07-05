@@ -5,7 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import type { FinancialCompanyResult } from "@/app/api/industries/financials/route";
 import type { CompanyNewsResult } from "@/app/api/industries/company-news/route";
-import type { PrimerComparisonResult, PrimerPlayer } from "@/lib/types";
+import type { CompanyAnalysis, PrimerComparisonResult, PrimerPlayer } from "@/lib/types";
+import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { CompanyAnalysisView } from "./company-analysis-view";
 import { FinancialComparison } from "./financial-comparison";
 import { Markdown } from "./markdown";
 import { SourceLink } from "./source-link";
@@ -55,6 +57,13 @@ export function PlayerComparison({
   const [newsError, setNewsError] = useState<string | null>(null);
   const [expandedNews, setExpandedNews] = useState<Record<string, number>>({});
   const [activePanel, setActivePanel] = useState<"compare" | "financials" | "news" | null>(null);
+
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetCompany, setSheetCompany] = useState<string | null>(null);
+  const [sheetAnalysis, setSheetAnalysis] = useState<CompanyAnalysis | null>(null);
+  const [sheetLoading, setSheetLoading] = useState(false);
+  const [sheetError, setSheetError] = useState<string | null>(null);
+  const sheetCache = useRef<Map<string, CompanyAnalysis>>(new Map());
 
   const [qaMessages, setQaMessages] = useState<QaMessage[]>([]);
   const [qaInput, setQaInput] = useState("");
@@ -296,6 +305,35 @@ export function PlayerComparison({
     }
   }
 
+  async function openCompanyDrawer(name: string) {
+    setSheetCompany(name);
+    setSheetOpen(true);
+    const cached = sheetCache.current.get(name);
+    if (cached) {
+      setSheetAnalysis(cached);
+      return;
+    }
+    setSheetAnalysis(null);
+    setSheetLoading(true);
+    setSheetError(null);
+    try {
+      const res = await fetch(
+        `/api/industries/company-analysis?industry=${encodeURIComponent(industrySlug)}&subsector=${encodeURIComponent(subsectorSlug)}&company=${encodeURIComponent(name)}`
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error ?? "Failed to load company analysis");
+      }
+      const data = (await res.json()) as { analysis: CompanyAnalysis };
+      sheetCache.current.set(name, data.analysis);
+      setSheetAnalysis(data.analysis);
+    } catch (err) {
+      setSheetError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setSheetLoading(false);
+    }
+  }
+
   async function handleCompare() {
     setActivePanel("compare");
     if (result !== null) return; // already have data — just show it
@@ -363,15 +401,14 @@ export function PlayerComparison({
                   )}
                 </div>
                 {candidate.positioning ? <p className="mt-1 text-xs text-muted-foreground">{candidate.positioning}</p> : null}
-                <a
-                  href={`/industries/${industrySlug}/${subsectorSlug}/company/${encodeURIComponent(candidate.name)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); openCompanyDrawer(candidate.name); }}
                   className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                 >
                   <FileTextIcon className="size-3" />
                   Full Company Analysis
-                </a>
+                </button>
               </div>
               {candidate.custom ? (
                 <button
@@ -746,6 +783,26 @@ export function PlayerComparison({
           {qaError ? <p className="text-xs text-destructive">{qaError}</p> : null}
         </div>
 
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>{sheetCompany ?? "Company Analysis"}</SheetTitle>
+            <SheetClose />
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto px-5 py-5">
+            {sheetLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2Icon className="size-4 animate-spin" />
+                Generating analysis — this takes ~30s…
+              </div>
+            ) : sheetError ? (
+              <p className="text-sm text-destructive">{sheetError}</p>
+            ) : sheetAnalysis ? (
+              <CompanyAnalysisView analysis={sheetAnalysis} />
+            ) : null}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
