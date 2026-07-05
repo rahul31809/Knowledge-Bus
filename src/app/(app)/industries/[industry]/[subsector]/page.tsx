@@ -22,7 +22,7 @@ import { findSubsector } from "@/lib/industry-taxonomy";
 import { fetchIndustryPrimer, saveIndustryPrimer } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 export default async function IndustryPrimerPage({
   params,
