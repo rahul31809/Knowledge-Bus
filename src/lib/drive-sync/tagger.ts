@@ -120,45 +120,86 @@ Example: ["strategy", "porter-five-forces", "case-study", "competitive-advantage
   }
 }
 
-export async function generateSummaryForFile(file: DriveFileEntry, content: string): Promise<string> {
+// Downloads a Drive file as a base64-encoded PDF. Works for native Google
+// Slides (exported via Drive API) and native PDFs (downloaded directly).
+// Returns null for PPTX and other binary formats that can't be exported.
+export async function downloadAsPdfBase64(
+  drive: drive_v3.Drive,
+  file: { id: string; mimeType: string }
+): Promise<string | null> {
+  try {
+    if (file.mimeType === GOOGLE_SLIDES_MIME) {
+      const res = await drive.files.export(
+        { fileId: file.id, mimeType: "application/pdf" },
+        { responseType: "arraybuffer" }
+      );
+      return Buffer.from(res.data as ArrayBuffer).toString("base64");
+    }
+    if (file.mimeType === PDF_MIME) {
+      const res = await drive.files.get(
+        { fileId: file.id, alt: "media" },
+        { responseType: "arraybuffer" }
+      );
+      return Buffer.from(res.data as unknown as ArrayBuffer).toString("base64");
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function generateSummaryForFile(
+  file: DriveFileEntry,
+  { pdfBase64, text: fallbackText }: { pdfBase64?: string; text?: string }
+): Promise<string> {
   const apiKey = process.env.GOOGLE_AI_API_KEY;
   if (!apiKey) throw new Error("GOOGLE_AI_API_KEY is not set");
-  if (!content.trim()) throw new Error("No extractable text content for this file");
+  if (!pdfBase64 && !fallbackText?.trim()) throw new Error("No content available for this file");
 
   const ai = new GoogleGenAI({ apiKey });
 
-  const prompt = `You are an MBA tutor at SPJIMR teaching this material for genuine understanding, not just summarizing it. Two principles: (1) relational over instrumental — teach the reasoning behind an idea, not just the idea, so it transfers to situations not seen before; (2) fight the illusion of competence — a fluent read-through feels like learning but isn't, so end with self-check questions that force recall rather than recognition.
+  const prompt = `You are an MBA tutor at SPJIMR. You have been given a pre-read document — study it fully, including any diagrams, tables, and visual content.
 
 File: "${file.name}"
 
-Content:
-${content.trim()}
+Two non-negotiable principles: (1) relational over instrumental — teach the reasoning behind each idea so it transfers to new situations, not just the definition; (2) fight the illusion of competence — a fluent read feels like learning but isn't; the self-check must force genuine recall.
 
-Produce a condensed Professor-Mode study note in markdown, grounded only in claims the content actually supports. Structure:
+Produce a condensed Professor-Mode study note in markdown. Structure:
 
 ## The big picture
-1-2 sentences: the one question this material answers, and why it matters to a manager or decision-maker.
+1-2 sentences: the one question this material answers and why it matters to a manager or decision-maker.
 
 ## Core concepts
-For each key idea in the material (2-5 of them, fewer if the material is thin): give the intuition first in plain language with one sharp analogy if useful, then the precise framework/definition/formula.
+For each key idea (2-5, fewer if the material is thin): intuition first in plain language with one sharp analogy if useful, then the precise framework/definition/formula. Build each on the last.
 
-## Real-world application
-One concrete example, situation, or company tie-in that makes this material's content concrete rather than abstract.
+## Worked example
+One concrete, business-flavored worked example that walks the main concept or framework through a real or realistic situation. For quantitative material, show the calculation and narrate each step. For qualitative material, walk a company or decision through the framework.
 
 ## Common traps
-1-3 specific misconceptions or mistakes a learner is likely to make with this exact material, each with why it's wrong. Skip this section if the material is too short/simple for any.
+1-3 specific misconceptions a learner is likely to hold about this material, each with why it is wrong. Skip if the material is too short or simple.
 
 ## Test yourself
-2-3 questions rising in difficulty (recall, then apply). Since this is a static note, include each answer directly beneath its question rather than withholding it.
+3 questions rising in difficulty: recall → apply → analyse. Include the answer beneath each question (this is a static note, not a live quiz).
 
-Keep the whole note tight (roughly 300-450 words) — this is a study note for one document, not a full lesson. Output ONLY the markdown note, no preamble or closing remarks.`;
+## Quick recap
+One short paragraph (3-5 sentences) compressing the whole note — key terms, the framework(s), any formula. Something to glance at before a quiz.
+
+Target 450-600 words total. Output ONLY the markdown note, no preamble or closing remarks.`;
+
+  const contentParts: object[] = [];
+  if (pdfBase64) {
+    contentParts.push({ inlineData: { mimeType: "application/pdf", data: pdfBase64 } });
+  } else if (fallbackText) {
+    contentParts.push({ text: `Document content:\n${fallbackText.trim()}` });
+  }
+  contentParts.push({ text: prompt });
 
   const result = await ai.models.generateContent({
     model: "gemini-3.1-flash-lite",
-    contents: prompt,
+    contents: [{ role: "user", parts: contentParts }],
   });
 
-  const text = result.text?.trim();
-  if (!text) throw new Error("Gemini returned an empty summary");
-  return text;
+  const summary = result.text?.trim();
+  if (!summary) throw new Error("Gemini returned an empty summary");
+  return summary;
 }

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient as createSessionClient } from "@/lib/supabase/server";
 import { getDriveClient } from "@/lib/drive-sync/client";
-import { extractFileContent, generateSummaryForFile } from "@/lib/drive-sync/tagger";
+import { extractFileContent, generateSummaryForFile, downloadAsPdfBase64 } from "@/lib/drive-sync/tagger";
 
 export const maxDuration = 60;
 
@@ -33,8 +33,10 @@ export async function POST(request: Request) {
     const supabase = createSupabaseClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
 
     const drive = getDriveClient();
-    const content = await extractFileContent(drive, { id: fileId, name: fileName, mimeType, webViewLink }, 8000);
-    const summary = await generateSummaryForFile({ id: fileId, name: fileName, mimeType, webViewLink }, content);
+    const fileEntry = { id: fileId, name: fileName, mimeType, webViewLink };
+    const pdfBase64 = await downloadAsPdfBase64(drive, fileEntry);
+    const text = pdfBase64 ? undefined : await extractFileContent(drive, fileEntry, 8000);
+    const summary = await generateSummaryForFile(fileEntry, { pdfBase64: pdfBase64 ?? undefined, text });
 
     const generatedAt = new Date().toISOString();
     const { error } = await supabase.from("drive_file_tags").upsert(
