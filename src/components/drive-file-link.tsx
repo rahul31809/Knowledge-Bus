@@ -10,6 +10,7 @@ import {
   FileVideoIcon,
   Loader2Icon,
   PresentationIcon,
+  RefreshCwIcon,
   SparklesIcon,
 } from "lucide-react";
 import { Markdown } from "@/components/industry-primer/markdown";
@@ -70,12 +71,7 @@ export function DriveFileLink({
   const [error, setError] = useState<string | null>(null);
   const { icon: Icon, className } = fileIconFor(file.mimeType);
 
-  async function handleSummarize(e: React.MouseEvent) {
-    e.preventDefault();
-    if (summary) {
-      setShowSummary((prev) => !prev);
-      return;
-    }
+  async function callSummarizeApi() {
     setLoading(true);
     setError(null);
     try {
@@ -99,6 +95,20 @@ export function DriveFileLink({
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleSummarize(e: React.MouseEvent) {
+    e.preventDefault();
+    if (summary) {
+      setShowSummary((prev) => !prev);
+      return;
+    }
+    await callSummarizeApi();
+  }
+
+  async function handleRegenerate(e: React.MouseEvent) {
+    e.preventDefault();
+    await callSummarizeApi();
   }
 
   return (
@@ -149,6 +159,17 @@ export function DriveFileLink({
       {showSummary && summary ? (
         <div className="ml-6 mt-1 max-w-2xl rounded-md border border-border bg-muted/50 p-3">
           <Markdown>{summary}</Markdown>
+          <div className="mt-3 flex justify-end border-t border-border pt-2">
+            <button
+              type="button"
+              onClick={handleRegenerate}
+              disabled={loading}
+              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+            >
+              {loading ? <Loader2Icon className="size-3 animate-spin" /> : <RefreshCwIcon className="size-3" />}
+              {loading ? "Regenerating…" : "Regenerate"}
+            </button>
+          </div>
         </div>
       ) : null}
     </div>
