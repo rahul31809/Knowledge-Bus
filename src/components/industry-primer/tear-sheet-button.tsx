@@ -12,7 +12,7 @@ function mdToHtml(md: string): string {
     .replace(/^## (.+)$/gm, '<p class="h2">$1</p>')
     .replace(/^# (.+)$/gm, '<p class="h1">$1</p>')
     .replace(/^[-•*] (.+)$/gm, "<li>$1</li>")
-    .replace(/(<li>.*<\/li>\n?)+/gs, (match) => `<ul>${match}</ul>`)
+    .replace(/(<li>[^]*?<\/li>\n?)+/g, (match) => `<ul>${match}</ul>`)
     .replace(/\n{2,}/g, "<br>");
 }
 
