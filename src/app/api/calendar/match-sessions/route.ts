@@ -21,6 +21,13 @@ const DISPLAY_ONLY_SUBJECTS: Record<string, string> = {
   mcom: "Management Communication",
 };
 
+// Calendar codes whose initials don't obviously expand to the Drive folder
+// name — hardcode so Gemini doesn't guess wrong. Keyed by subject code,
+// lowercased. Value must match the Drive folder name exactly.
+const SUBJECT_CODE_ALIASES: Record<string, string> = {
+  bdta: "Business Transformation in the Digital Age",
+};
+
 interface MatchResult {
   eventDate: string;
   eventTime: string | null;
@@ -45,7 +52,8 @@ async function processRow(
     const displayOnly = DISPLAY_ONLY_SUBJECTS[parsed.subjectCode.trim().toLowerCase()];
     if (displayOnly) return { ...base, subject: displayOnly, sessionLabel: null, sector: null, files: [] };
 
-    const subject = await matchSubjectName(parsed.subjectCode, candidateSubjects).catch(() => null);
+    const alias = SUBJECT_CODE_ALIASES[parsed.subjectCode.trim().toLowerCase()];
+    const subject = alias ?? await matchSubjectName(parsed.subjectCode, candidateSubjects).catch(() => null);
     if (!subject) return { ...base, subject: null, sessionLabel: null, sector: null, files: [] };
 
     const drive = await fetchSubjectDriveResources(subject);
