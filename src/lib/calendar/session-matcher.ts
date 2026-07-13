@@ -19,7 +19,7 @@ export function parseSessionEventTitle(title: string): ParsedSessionEvent | null
   // — normalizing to spaces first keeps boundary matching reliable.
   const normalized = title.replace(/_/g, " ");
 
-  const sessionMatch = normalized.match(/session\s*(?:no\.?\s*)?\d+(?:\s*[,&]\s*\d+)*/i);
+  const sessionMatch = normalized.match(/session\s*[-–]?\s*(?:no\.?\s*)?\d+(?:\s*[,&]\s*\d+)*/i);
   if (!sessionMatch) return null;
   const sessionRef = sessionMatch[0];
 
