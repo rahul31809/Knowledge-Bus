@@ -15,7 +15,7 @@ export function MetricTiles({ metrics, searchContext }: { metrics: PrimerMetric[
           ) : (
             <p className="text-xs font-medium text-muted-foreground">{metric.name}</p>
           )}
-          <p className="mt-1 text-base font-semibold text-foreground">{metric.benchmark}</p>
+          <p className="mt-1 tabular-nums text-base font-semibold text-foreground">{metric.benchmark}</p>
           {metric.formula && (
             <p className="mt-1 rounded bg-muted px-2 py-0.5 font-mono text-[10px] text-primary">{metric.formula}</p>
           )}

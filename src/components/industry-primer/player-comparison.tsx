@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { ChevronRightIcon, ExternalLinkIcon, FileTextIcon, ImageIcon, Loader2Icon, NewspaperIcon, PlusIcon, SearchIcon, XIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
@@ -8,8 +9,12 @@ import type { CompanyNewsResult } from "@/app/api/industries/company-news/route"
 import type { CompanyAnalysis, PrimerComparisonResult, PrimerPlayer } from "@/lib/types";
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { CompanyAnalysisView } from "./company-analysis-view";
-import { FinancialComparison } from "./financial-comparison";
 import { Markdown } from "./markdown";
+
+const FinancialComparison = dynamic(
+  () => import("./financial-comparison").then((m) => m.FinancialComparison),
+  { ssr: false, loading: () => <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2Icon className="size-4 animate-spin" />Loading financials…</div> }
+);
 import { SourceLink } from "./source-link";
 import { TAG_STYLES, originVariant } from "./tagged-card-grid";
 

@@ -25,7 +25,7 @@ function formatRelativeTime(iso: string | null): string {
 
 interface ArticleCardProps {
   article: NewsArticle;
-  size?: "hero" | "default";
+  size?: "hero" | "default" | "list";
   selected: boolean;
   onSelectToggle: (id: string) => void;
   showCategoryTag?: boolean;
@@ -76,6 +76,81 @@ export function ArticleCard({ article, size = "default", selected, onSelectToggl
   }
 
   const isHero = size === "hero";
+  const isList = size === "list";
+
+  if (isList) {
+    return (
+      <div
+        className={cn(
+          "flex items-start gap-3 py-3",
+          selected && "bg-primary/5"
+        )}
+      >
+        <label className="mt-0.5 flex shrink-0 items-center">
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={() => onSelectToggle(article.id)}
+            className="size-3.5 accent-primary"
+            aria-label={`Select "${article.title}" for AI summary`}
+          />
+        </label>
+
+        <a
+          href={article.link}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={markRead}
+          className="group min-w-0 flex-1"
+        >
+          <span
+            className={cn(
+              "block font-serif text-base font-semibold leading-snug group-hover:underline",
+              isRead ? "text-muted-foreground" : "text-foreground"
+            )}
+          >
+            {article.title}
+          </span>
+          <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+            {showCategoryTag ? (
+              <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                {article.category}
+              </span>
+            ) : null}
+            <span>{article.source}</span>
+            {article.publishedAt ? <span>· {formatRelativeTime(article.publishedAt)}</span> : null}
+            {isRead ? (
+              <span className="inline-flex items-center gap-0.5">
+                <CheckIcon className="size-3" /> Read
+              </span>
+            ) : null}
+          </p>
+        </a>
+
+        <div className="flex shrink-0 items-center gap-1.5">
+          <button
+            type="button"
+            onClick={toggleBookmarked}
+            className="text-muted-foreground/50 hover:text-foreground"
+            aria-label={isBookmarked ? "Remove bookmark" : "Bookmark"}
+          >
+            <BookmarkIcon className={cn("size-3.5", isBookmarked && "fill-current text-amber-500")} />
+          </button>
+          <button
+            type="button"
+            onClick={toggleSaved}
+            className="text-muted-foreground/50 hover:text-foreground"
+            aria-label={isSaved ? "Unsave" : "Save"}
+          >
+            <StarIcon className={cn("size-3.5", isSaved && "fill-current text-sky-500")} />
+          </button>
+          <a href={article.link} target="_blank" rel="noopener noreferrer" onClick={markRead}>
+            <ExternalLinkIcon className="size-3 text-muted-foreground/30 hover:text-muted-foreground" />
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

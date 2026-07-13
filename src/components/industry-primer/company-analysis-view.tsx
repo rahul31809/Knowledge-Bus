@@ -78,7 +78,7 @@ export function CompanyAnalysisView({
             {splitTitle(active.title).label}
           </h2>
           <div className="mt-4">
-            <Markdown>{active.markdown}</Markdown>
+            <Markdown enableEntityLinks>{active.markdown}</Markdown>
           </div>
         </div>
       </div>

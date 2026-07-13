@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { CompanyAnalysisView } from "@/components/industry-primer/company-analysis-view";
 import { ResetCompanyAnalysisButton } from "@/components/industry-primer/reset-company-analysis-button";
+import { TearSheetButton } from "@/components/industry-primer/tear-sheet-button";
 import { generateCompanyAnalysis } from "@/lib/company-analysis/generator";
 import { findSubsector } from "@/lib/industry-taxonomy";
 import { fetchCompanyAnalysis, saveCompanyAnalysis } from "@/lib/queries";
@@ -54,12 +55,15 @@ export default async function CompanyAnalysisPage({
           </p>
         </div>
         {analysis ? (
-          <div className="flex shrink-0 flex-col items-end gap-1">
-            <ResetCompanyAnalysisButton
-              industrySlug={industrySlug}
-              subsectorSlug={subsectorSlug}
-              companyName={companyName}
-            />
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            <div className="flex items-center gap-2">
+              <TearSheetButton analysis={analysis} />
+              <ResetCompanyAnalysisButton
+                industrySlug={industrySlug}
+                subsectorSlug={subsectorSlug}
+                companyName={companyName}
+              />
+            </div>
             <p className="text-xs text-muted-foreground">
               Generated {new Date(analysis.generated_at).toLocaleDateString()}
             </p>

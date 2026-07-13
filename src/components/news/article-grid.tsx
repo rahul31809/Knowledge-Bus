@@ -164,11 +164,12 @@ export function ArticleGrid({ articles, emptyMessage, heroCount = 0, showCategor
       ) : null}
 
       {gridArticles.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="divide-y divide-border rounded-lg border border-border bg-card px-4">
           {gridArticles.map((article) => (
             <ArticleCard
               key={article.id}
               article={article}
+              size="list"
               selected={selectedId === article.id}
               onSelectToggle={handleSelectToggle}
               showCategoryTag={showCategoryTag}
