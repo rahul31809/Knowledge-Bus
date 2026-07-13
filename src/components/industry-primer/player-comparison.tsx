@@ -8,6 +8,7 @@ import type { FinancialCompanyResult } from "@/app/api/industries/financials/rou
 import type { CompanyNewsResult } from "@/app/api/industries/company-news/route";
 import type { CompanyAnalysis, PrimerComparisonResult, PrimerPlayer } from "@/lib/types";
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { TearSheetButton } from "./tear-sheet-button";
 import { CompanyAnalysisView } from "./company-analysis-view";
 import { Markdown } from "./markdown";
 
@@ -792,7 +793,12 @@ export function PlayerComparison({
         <SheetContent>
           <SheetHeader>
             <SheetTitle>{sheetCompany ?? "Company Analysis"}</SheetTitle>
-            <SheetClose />
+            <div className="flex items-center gap-2">
+              {sheetAnalysis ? (
+                <TearSheetButton analysis={sheetAnalysis} />
+              ) : null}
+              <SheetClose />
+            </div>
           </SheetHeader>
           <div className="flex-1 min-h-0 overflow-hidden">
             {sheetLoading ? (
