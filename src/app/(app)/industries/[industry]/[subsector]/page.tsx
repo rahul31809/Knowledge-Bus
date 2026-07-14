@@ -11,6 +11,9 @@ import { TaggedCardGrid, impactVariant, maturityVariant } from "@/components/ind
 import { ValueChainDiagram } from "@/components/industry-primer/value-chain-diagram";
 import { ResetPrimerButton } from "@/components/industry-primer/reset-primer-button";
 import { RecentUpdates } from "@/components/industry-primer/recent-updates";
+import { PrepStatusToggle } from "@/components/industry-primer/prep-status-toggle";
+import { QuickRevisionPanel } from "@/components/industry-primer/quick-revision-panel";
+import { fetchPrepStatus } from "@/lib/queries";
 import { GlossaryGrid } from "@/components/industry-primer/glossary-grid";
 import { RevenueCostBreakdown } from "@/components/industry-primer/revenue-cost-breakdown";
 import { PorterFiveForces } from "@/components/industry-primer/porter-five-forces";
@@ -36,13 +39,17 @@ export default async function IndustryPrimerPage({
   const { industry, subsector } = match;
   const supabase = await createClient();
 
-  let primer = await fetchIndustryPrimer(supabase, industrySlug, subsectorSlug);
+  const [primer, prepStatus] = await Promise.all([
+    fetchIndustryPrimer(supabase, industrySlug, subsectorSlug),
+    fetchPrepStatus(supabase, industrySlug, subsectorSlug),
+  ]);
+  let resolvedPrimer = primer;
   let generationError: string | null = null;
 
-  if (!primer) {
+  if (!resolvedPrimer) {
     try {
       const content = await generateIndustryPrimer(industry.name, subsector.name);
-      primer = await saveIndustryPrimer(
+      resolvedPrimer = await saveIndustryPrimer(
         supabase,
         industrySlug,
         subsectorSlug,
@@ -79,14 +86,28 @@ export default async function IndustryPrimerPage({
           <h1 className="text-2xl font-semibold text-foreground">{subsector.name}</h1>
           <p className="text-sm text-muted-foreground">{industry.name}</p>
         </div>
-        {primer ? (
-          <div className="flex shrink-0 flex-col items-end gap-1">
-            <ResetPrimerButton industrySlug={industrySlug} subsectorSlug={subsectorSlug} />
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <PrepStatusToggle
+            industrySlug={industrySlug}
+            subsectorSlug={subsectorSlug}
+            initialStatus={prepStatus}
+          />
+          {resolvedPrimer ? (
+            <div className="flex items-center gap-2">
+              <QuickRevisionPanel
+                subsectorName={subsector.name}
+                industryName={industry.name}
+                primer={resolvedPrimer}
+              />
+              <ResetPrimerButton industrySlug={industrySlug} subsectorSlug={subsectorSlug} />
+            </div>
+          ) : null}
+          {resolvedPrimer ? (
             <p className="text-xs text-muted-foreground">
-              Generated {new Date(primer.generated_at).toLocaleDateString()}
+              Generated {new Date(resolvedPrimer.generated_at).toLocaleDateString()}
             </p>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
 
       {generationError ? (
@@ -95,7 +116,7 @@ export default async function IndustryPrimerPage({
         </div>
       ) : null}
 
-      {primer ? (
+      {resolvedPrimer ? (
         <div className="flex flex-col gap-4">
 
           {/* ── 1. OVERVIEW ─────────────────────────────────────────────────── */}
@@ -103,9 +124,9 @@ export default async function IndustryPrimerPage({
             <h2 className="text-sm font-semibold text-foreground">
               <SourceLink query={`Overview ${searchContext}`}>Overview</SourceLink>
             </h2>
-            <p className="mt-2 text-sm text-muted-foreground">{primer.overview.summary}</p>
+            <p className="mt-2 text-sm text-muted-foreground">{resolvedPrimer.overview.summary}</p>
             <div className="mt-3">
-              <StatRow stats={primer.overview.key_stats} />
+              <StatRow stats={resolvedPrimer.overview.key_stats} />
             </div>
           </section>
 
@@ -118,18 +139,18 @@ export default async function IndustryPrimerPage({
               <div className="mt-3">
                 <StatRow
                   stats={[
-                    { label: "Market Size", value: primer.market_size_growth.current_size_label },
-                    { label: "Growth Rate", value: primer.market_size_growth.cagr_label },
+                    { label: "Market Size", value: resolvedPrimer.market_size_growth.current_size_label },
+                    { label: "Growth Rate", value: resolvedPrimer.market_size_growth.cagr_label },
                   ]}
                 />
               </div>
               <div className="mt-4">
                 <BarChart
-                  data={primer.market_size_growth.historical_trend}
-                  unit={primer.market_size_growth.trend_unit}
+                  data={resolvedPrimer.market_size_growth.historical_trend}
+                  unit={resolvedPrimer.market_size_growth.trend_unit}
                 />
               </div>
-              <p className="mt-3 text-sm text-muted-foreground">{primer.market_size_growth.commentary}</p>
+              <p className="mt-3 text-sm text-muted-foreground">{resolvedPrimer.market_size_growth.commentary}</p>
             </section>
 
             <section className="rounded-lg border border-border bg-card p-4">
@@ -139,37 +160,37 @@ export default async function IndustryPrimerPage({
               <div className="mt-3">
                 <StatRow
                   stats={[
-                    { label: "Projected Size", value: primer.future_outlook.projection_label },
-                    { label: "Projected CAGR", value: primer.future_outlook.projected_cagr_label },
+                    { label: "Projected Size", value: resolvedPrimer.future_outlook.projection_label },
+                    { label: "Projected CAGR", value: resolvedPrimer.future_outlook.projected_cagr_label },
                   ]}
                 />
               </div>
               <div className="mt-4">
-                <BarChart data={primer.future_outlook.comparison} unit={primer.future_outlook.trend_unit} />
+                <BarChart data={resolvedPrimer.future_outlook.comparison} unit={resolvedPrimer.future_outlook.trend_unit} />
               </div>
             </section>
           </div>
 
           {/* ── 3. GROWTH DRIVERS & CHALLENGES ──────────────────────────────── */}
-          {(primer.future_outlook.drivers.length > 0 ||
-            (primer.future_outlook.challenges && primer.future_outlook.challenges.length > 0)) && (
+          {(resolvedPrimer.future_outlook.drivers.length > 0 ||
+            (resolvedPrimer.future_outlook.challenges && resolvedPrimer.future_outlook.challenges.length > 0)) && (
             <div className="grid gap-4 lg:grid-cols-2">
-              {primer.future_outlook.drivers.length > 0 && (
+              {resolvedPrimer.future_outlook.drivers.length > 0 && (
                 <section className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4">
                   <h2 className="mb-3 text-sm font-semibold text-foreground">
                     <SourceLink query={`Growth Drivers ${searchContext}`}>Growth Drivers</SourceLink>
                   </h2>
                   <TaggedCardGrid
-                    items={primer.future_outlook.drivers.map((d) => ({ title: d.title, description: d.description }))}
+                    items={resolvedPrimer.future_outlook.drivers.map((d) => ({ title: d.title, description: d.description }))}
                     searchContext={searchContext}
                   />
                 </section>
               )}
-              {primer.future_outlook.challenges && primer.future_outlook.challenges.length > 0 && (
+              {resolvedPrimer.future_outlook.challenges && resolvedPrimer.future_outlook.challenges.length > 0 && (
                 <section className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-4">
                   <h2 className="mb-3 text-sm font-semibold text-foreground">Challenges &amp; Headwinds</h2>
                   <TaggedCardGrid
-                    items={primer.future_outlook.challenges.map((c) => ({ title: c.title, description: c.description }))}
+                    items={resolvedPrimer.future_outlook.challenges.map((c) => ({ title: c.title, description: c.description }))}
                     searchContext={searchContext}
                   />
                 </section>
@@ -178,12 +199,12 @@ export default async function IndustryPrimerPage({
           )}
 
           {/* ── 4. MARKET SEGMENTS (absorbs Business Models) ─────────────────── */}
-          {primer.market_segments && primer.market_segments.segments.length > 0 && (
+          {resolvedPrimer.market_segments && resolvedPrimer.market_segments.segments.length > 0 && (
             <section className="rounded-lg border border-border bg-card p-4">
               <h2 className="mb-3 text-sm font-semibold text-foreground">
                 <SourceLink query={`${subsector.name} market segments India`}>Market Segments</SourceLink>
               </h2>
-              <MarketSegmentsGrid segments={primer.market_segments.segments} />
+              <MarketSegmentsGrid segments={resolvedPrimer.market_segments.segments} />
             </section>
           )}
 
@@ -193,20 +214,20 @@ export default async function IndustryPrimerPage({
               <SourceLink query={`Value Chain ${searchContext}`}>Value Chain</SourceLink>
             </h2>
             <div className="mt-3">
-              <ValueChainDiagram stages={primer.value_chain.stages} searchContext={searchContext} />
+              <ValueChainDiagram stages={resolvedPrimer.value_chain.stages} searchContext={searchContext} />
             </div>
           </section>
 
           {/* ── 6. REVENUE & COST BREAKDOWN ─────────────────────────────────── */}
-          {primer.revenue_cost_breakdown &&
-            (primer.revenue_cost_breakdown.revenue.length > 0 || primer.revenue_cost_breakdown.costs.length > 0) && (
+          {resolvedPrimer.revenue_cost_breakdown &&
+            (resolvedPrimer.revenue_cost_breakdown.revenue.length > 0 || resolvedPrimer.revenue_cost_breakdown.costs.length > 0) && (
               <section className="rounded-lg border border-border bg-card p-4">
                 <h2 className="mb-4 text-sm font-semibold text-foreground">
                   <SourceLink query={`${subsector.name} revenue model cost structure India`}>
                     Revenue &amp; Cost Breakdown
                   </SourceLink>
                 </h2>
-                <RevenueCostBreakdown data={primer.revenue_cost_breakdown} />
+                <RevenueCostBreakdown data={resolvedPrimer.revenue_cost_breakdown} />
               </section>
             )}
 
@@ -217,7 +238,7 @@ export default async function IndustryPrimerPage({
             </h2>
             <div className="mt-3">
               <PlayerComparison
-                players={primer.major_players.players}
+                players={resolvedPrimer.major_players.players}
                 industryName={industry.name}
                 subsectorName={subsector.name}
                 industrySlug={industrySlug}
@@ -228,22 +249,22 @@ export default async function IndustryPrimerPage({
           </section>
 
           {/* ── 8. RECENT UPDATES ───────────────────────────────────────────── */}
-          {primer.recent_updates && primer.recent_updates.updates.length > 0 && (
+          {resolvedPrimer.recent_updates && resolvedPrimer.recent_updates.updates.length > 0 && (
             <section className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
               <h2 className="mb-3 text-sm font-semibold text-foreground">
                 <SourceLink query={`${subsector.name} India latest news 2025`}>Recent Updates</SourceLink>
               </h2>
-              <RecentUpdates updates={primer.recent_updates.updates} />
+              <RecentUpdates updates={resolvedPrimer.recent_updates.updates} />
             </section>
           )}
 
           {/* ── 9. PORTER'S FIVE FORCES ─────────────────────────────────────── */}
-          {primer.porter_five_forces && primer.porter_five_forces.forces.length > 0 && (
+          {resolvedPrimer.porter_five_forces && resolvedPrimer.porter_five_forces.forces.length > 0 && (
             <section className="rounded-lg border border-border bg-card p-4">
               <h2 className="mb-3 text-sm font-semibold text-foreground">
                 <SourceLink query={`Porter Five Forces ${searchContext}`}>Porter&apos;s Five Forces</SourceLink>
               </h2>
-              <PorterFiveForces forces={primer.porter_five_forces.forces} />
+              <PorterFiveForces forces={resolvedPrimer.porter_five_forces.forces} />
             </section>
           )}
 
@@ -256,7 +277,7 @@ export default async function IndustryPrimerPage({
             </h2>
             <div className="mt-3">
               <TaggedCardGrid
-                items={primer.policy_regulatory.items.map((item) => ({
+                items={resolvedPrimer.policy_regulatory.items.map((item) => ({
                   title: item.title,
                   description: `${item.authority} — ${item.description}`,
                   tag: item.year,
@@ -268,12 +289,12 @@ export default async function IndustryPrimerPage({
           </section>
 
           {/* ── 11. PESTLE ───────────────────────────────────────────────────── */}
-          {primer.pestle && primer.pestle.items.length > 0 && (
+          {resolvedPrimer.pestle && resolvedPrimer.pestle.items.length > 0 && (
             <section className="rounded-lg border border-border bg-card p-4">
               <h2 className="mb-3 text-sm font-semibold text-foreground">
                 <SourceLink query={`PESTLE analysis ${searchContext}`}>PESTLE Analysis</SourceLink>
               </h2>
-              <PestleGrid items={primer.pestle.items} />
+              <PestleGrid items={resolvedPrimer.pestle.items} />
             </section>
           )}
 
@@ -284,7 +305,7 @@ export default async function IndustryPrimerPage({
             </h2>
             <div className="mt-3">
               <TaggedCardGrid
-                items={primer.technology_trends.trends.map((trend) => ({
+                items={resolvedPrimer.technology_trends.trends.map((trend) => ({
                   title: trend.title,
                   description: trend.description,
                   tag: trend.maturity,
@@ -293,11 +314,11 @@ export default async function IndustryPrimerPage({
                 searchContext={searchContext}
               />
             </div>
-            {primer.ai_digital_integration.use_cases.length > 0 && (
+            {resolvedPrimer.ai_digital_integration.use_cases.length > 0 && (
               <>
                 <p className="mb-2 mt-4 text-xs font-medium text-muted-foreground">AI &amp; Digital Use Cases</p>
                 <TaggedCardGrid
-                  items={primer.ai_digital_integration.use_cases.map((useCase) => ({
+                  items={resolvedPrimer.ai_digital_integration.use_cases.map((useCase) => ({
                     title: useCase.title,
                     description: useCase.description,
                     tag: `${useCase.impact} impact`,
@@ -310,11 +331,11 @@ export default async function IndustryPrimerPage({
           </section>
 
           {/* ── 13. RISK MATRIX ──────────────────────────────────────────────── */}
-          {primer.risk_matrix &&
-            (primer.risk_matrix.financial.length > 0 || primer.risk_matrix.operational.length > 0) && (
+          {resolvedPrimer.risk_matrix &&
+            (resolvedPrimer.risk_matrix.financial.length > 0 || resolvedPrimer.risk_matrix.operational.length > 0) && (
               <section className="rounded-lg border border-border bg-card p-4">
                 <h2 className="mb-3 text-sm font-semibold text-foreground">Risk Matrix</h2>
-                <RiskMatrixGrid matrix={primer.risk_matrix} />
+                <RiskMatrixGrid matrix={resolvedPrimer.risk_matrix} />
               </section>
             )}
 
@@ -324,7 +345,7 @@ export default async function IndustryPrimerPage({
               <SourceLink query={`Key Metrics ${searchContext}`}>Key Metrics for Consultants</SourceLink>
             </h2>
             <div className="mt-3">
-              <MetricTiles metrics={primer.key_metrics.metrics} searchContext={searchContext} />
+              <MetricTiles metrics={resolvedPrimer.key_metrics.metrics} searchContext={searchContext} />
             </div>
           </section>
 
@@ -338,7 +359,7 @@ export default async function IndustryPrimerPage({
               <div>
                 <p className="mb-2 text-xs font-medium text-muted-foreground">Applicable Frameworks</p>
                 <FrameworkInsightGrid
-                  items={primer.consulting_lens.frameworks.map((framework) => ({
+                  items={resolvedPrimer.consulting_lens.frameworks.map((framework) => ({
                     title: framework.name,
                     description: framework.application,
                   }))}
@@ -350,7 +371,7 @@ export default async function IndustryPrimerPage({
               <div>
                 <p className="mb-2 text-xs font-medium text-muted-foreground">Likely Case Themes</p>
                 <FrameworkInsightGrid
-                  items={primer.consulting_lens.case_themes.map((theme) => ({
+                  items={resolvedPrimer.consulting_lens.case_themes.map((theme) => ({
                     title: theme.title,
                     description: theme.description,
                   }))}
@@ -369,11 +390,11 @@ export default async function IndustryPrimerPage({
           />
 
           {/* ── 17. GLOSSARY (reference — bottom) ───────────────────────────── */}
-          {primer.glossary && primer.glossary.terms.length > 0 && (
+          {resolvedPrimer.glossary && resolvedPrimer.glossary.terms.length > 0 && (
             <section className="rounded-lg border border-border bg-card p-4">
               <h2 className="mb-1 text-sm font-semibold text-foreground">Industry Terminology</h2>
               <p className="mb-3 text-xs text-muted-foreground">Reference — key terms and formulas for this sub-sector</p>
-              <GlossaryGrid terms={primer.glossary.terms} />
+              <GlossaryGrid terms={resolvedPrimer.glossary.terms} />
             </section>
           )}
 

@@ -596,6 +596,27 @@ export async function fetchUpcomingSessions(supabase: SupabaseServerClient): Pro
   });
 }
 
+export async function fetchPrepStatus(
+  supabase: SupabaseServerClient,
+  industrySlug: string,
+  subsectorSlug: string
+): Promise<import("./types").PrepStatus> {
+  const { data } = await supabase
+    .from("industry_prep")
+    .select("status")
+    .eq("industry_slug", industrySlug)
+    .eq("subsector_slug", subsectorSlug)
+    .maybeSingle();
+  return ((data as { status?: string } | null)?.status as import("./types").PrepStatus) ?? "not_started";
+}
+
+export async function fetchAllPrepStatuses(
+  supabase: SupabaseServerClient
+): Promise<import("./types").IndustryPrep[]> {
+  const { data } = await supabase.from("industry_prep").select("industry_slug, subsector_slug, status, updated_at");
+  return (data ?? []) as import("./types").IndustryPrep[];
+}
+
 export async function searchNewsArticles(supabase: SupabaseServerClient, query: string): Promise<NewsArticle[]> {
   // Strip PostgREST filter-string delimiters and SQL LIKE wildcards from user input
   const safe = query.replace(/[,()%_]/g, " ").trim();

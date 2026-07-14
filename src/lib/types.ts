@@ -348,6 +348,15 @@ export interface IndustryPrimerNote {
   created_at: string;
 }
 
+export type PrepStatus = "not_started" | "familiar" | "case_ready";
+
+export interface IndustryPrep {
+  industry_slug: string;
+  subsector_slug: string;
+  status: PrepStatus;
+  updated_at: string;
+}
+
 export interface PrimerComparisonResult {
   synthesis: string;
   parameters: string[];

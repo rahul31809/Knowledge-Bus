@@ -2,7 +2,22 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { QaSource } from "@/lib/types";
+import type { PrepStatus, QaSource } from "@/lib/types";
+
+export async function updatePrepStatus(
+  industrySlug: string,
+  subsectorSlug: string,
+  status: PrepStatus
+): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("industry_prep").upsert(
+    { industry_slug: industrySlug, subsector_slug: subsectorSlug, status, updated_at: new Date().toISOString() },
+    { onConflict: "industry_slug,subsector_slug" }
+  );
+  if (error) throw new Error(error.message);
+  revalidatePath(`/industries/${industrySlug}/${subsectorSlug}`);
+  revalidatePath("/industries");
+}
 
 export async function saveQaNote(
   industrySlug: string,
