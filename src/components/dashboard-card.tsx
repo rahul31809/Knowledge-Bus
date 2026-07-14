@@ -42,41 +42,31 @@ export function DashboardCard({
       href={href}
       style={style}
       className={cn(
-        "group relative flex flex-col gap-4 overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg",
+        "group flex flex-col gap-4 rounded-md border border-border bg-card transition-colors duration-150 hover:border-foreground/20 hover:bg-muted/40",
         isFeatured ? "p-6" : "p-5",
         className
       )}
     >
-      {isFeatured ? (
+      <div className="flex items-start justify-between gap-3">
         <div
           className={cn(
-            "pointer-events-none absolute -top-10 -right-10 size-40 rounded-full blur-3xl transition-opacity duration-300 group-hover:opacity-70",
-            ACCENT_CLASSES[accent].split(" ")[0],
-            "opacity-40"
-          )}
-        />
-      ) : null}
-
-      <div className="relative flex items-start justify-between gap-3">
-        <div
-          className={cn(
-            "flex shrink-0 items-center justify-center rounded-lg transition-transform duration-200 group-hover:scale-110",
-            isFeatured ? "size-12" : "size-10",
+            "flex shrink-0 items-center justify-center rounded-md",
+            isFeatured ? "size-10" : "size-9",
             ACCENT_CLASSES[accent]
           )}
         >
-          <Icon className={isFeatured ? "size-6" : "size-5"} />
+          <Icon className={isFeatured ? "size-5" : "size-4"} />
         </div>
-        <ArrowRightIcon className="size-4 text-muted-foreground/50 transition-transform group-hover:translate-x-0.5 group-hover:text-muted-foreground" />
+        <ArrowRightIcon className="size-4 text-muted-foreground/40 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-muted-foreground" />
       </div>
 
-      <div className="relative flex flex-col gap-1">
-        <h2 className={cn("font-semibold text-foreground", isFeatured ? "text-xl" : "text-base")}>{title}</h2>
+      <div className="flex flex-col gap-1">
+        <h2 className={cn("font-semibold text-foreground", isFeatured ? "text-lg" : "text-sm")}>{title}</h2>
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
 
       {meta ? (
-        <span className="relative inline-flex w-fit items-center rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+        <span className="inline-flex w-fit items-center rounded bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
           {meta}
         </span>
       ) : null}

@@ -39,25 +39,20 @@ export default async function BrowsePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-blue-600 to-violet-600 px-6 py-8 text-white shadow-lg sm:px-8 sm:py-10">
-        <div className="pointer-events-none absolute -top-16 -right-16 size-56 rounded-full bg-white/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-20 left-1/4 size-64 rounded-full bg-white/10 blur-3xl" />
-        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <GreetingHeading name="Rahul" />
-            <p className="mt-2 text-sm text-indigo-100 sm:text-base">
-              {allSubjects.length} subjects · {allArticles.length} articles
-              {allArticles.length > 0 ? ` (${unreadArticles.length} unread)` : ""} · {briefingEntries.length} saved
-              readings
-            </p>
-          </div>
-          <Link
-            href="/entries/new"
-            className={cn(buttonVariants({ variant: "default" }), "shrink-0 bg-white text-indigo-700 shadow-sm hover:bg-indigo-50")}
-          >
-            Add Entry
-          </Link>
+      <div className="flex flex-col gap-1 border-b border-border pb-6 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <GreetingHeading name="Rahul" />
+          <p className="mt-1 text-sm text-muted-foreground">
+            {allSubjects.length} subjects · {allArticles.length} articles
+            {allArticles.length > 0 ? ` (${unreadArticles.length} unread)` : ""} · {briefingEntries.length} saved readings
+          </p>
         </div>
+        <Link
+          href="/entries/new"
+          className={cn(buttonVariants({ variant: "default" }), "shrink-0")}
+        >
+          Add Entry
+        </Link>
       </div>
 
       {recentEntries.length > 0 ? (

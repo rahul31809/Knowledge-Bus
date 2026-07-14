@@ -25,10 +25,10 @@ export function NavHeader({ userEmail }: { userEmail: string | null }) {
       <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <Link href="/" className="flex flex-col leading-tight">
-            <span className="bg-gradient-to-r from-indigo-500 via-violet-500 to-blue-500 bg-clip-text text-2xl font-bold text-transparent">
+            <span className="text-lg font-bold tracking-tight text-foreground">
               Knowledge Base
             </span>
-            <span className="text-sm text-muted-foreground">Created by Rahul Agarwal (MBA, SPJIMR)</span>
+            <span className="text-xs text-muted-foreground">Rahul Agarwal · MBA, SPJIMR</span>
           </Link>
           <Link
             href="/class-prep"
