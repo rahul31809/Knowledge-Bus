@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookmarkIcon, Building2Icon, GraduationCapIcon, NewspaperIcon, PencilLineIcon, RssIcon } from "lucide-react";
+import { BookmarkIcon, Building2Icon, FileTextIcon, GraduationCapIcon, NewspaperIcon, PencilLineIcon, RssIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { DashboardCard } from "@/components/dashboard-card";
 import { GreetingHeading } from "@/components/greeting-heading";
@@ -152,6 +152,16 @@ export default async function BrowsePage() {
           description="Generate a fresh exam-style quiz from any subject's session PPTs"
           className="animate-fade-in-up"
           style={{ animationDelay: "300ms" }}
+        />
+
+        <DashboardCard
+          href="/resume"
+          icon={FileTextIcon}
+          accent="violet"
+          title="Resume Builder"
+          description="Paste a JD — AI matches your master bullet bank and downloads a tailored DOCX"
+          className="animate-fade-in-up"
+          style={{ animationDelay: "360ms" }}
         />
       </div>
     </div>
