@@ -14,7 +14,7 @@ export async function updatePrepStatus(
     { industry_slug: industrySlug, subsector_slug: subsectorSlug, status, updated_at: new Date().toISOString() },
     { onConflict: "industry_slug,subsector_slug" }
   );
-  if (error) throw new Error(error.message);
+  if (error) return;
   revalidatePath(`/industries/${industrySlug}/${subsectorSlug}`);
   revalidatePath("/industries");
 }
