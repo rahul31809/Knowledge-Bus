@@ -26,7 +26,6 @@ const DISPLAY_ONLY_SUBJECTS: Record<string, string> = {
 // lowercased. Value must match the Drive folder name exactly.
 const SUBJECT_CODE_ALIASES: Record<string, string> = {
   bdta: "Business Transformation in the Digital Age",
-  "systems & design thinking": "Systems and Design Thinking",
 };
 
 interface MatchResult {

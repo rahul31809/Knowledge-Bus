@@ -25,7 +25,9 @@ export function parseSessionEventTitle(title: string): ParsedSessionEvent | null
 
   const withoutSession = normalized.slice(0, sessionMatch.index) + normalized.slice(sessionMatch.index! + sessionRef.length);
   const withoutDiv = withoutSession.replace(/\bdiv\b[\s-]*\w*/gi, " ");
-  const subjectCode = withoutDiv.replace(/^[\s\-:]+|[\s\-:]+$/g, "").trim();
+  // Normalise "&" → "and" so "Systems & Design Thinking" matches the Drive
+  // folder "Systems and Design Thinking" without needing per-subject aliases.
+  const subjectCode = withoutDiv.replace(/^[\s\-:]+|[\s\-:]+$/g, "").trim().replace(/\s*&\s*/g, " and ");
   if (!subjectCode) return null;
 
   return { rawTitle: title, subjectCode, sessionRef };
