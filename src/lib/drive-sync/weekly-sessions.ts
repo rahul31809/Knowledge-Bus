@@ -50,7 +50,18 @@ async function findCalendarFile(drive: ReturnType<typeof getDriveClient>, rootFo
     orderBy: "modifiedTime desc",
     pageSize: 1,
   });
-  return rootRes.data.files?.[0]?.id ?? null;
+  if (rootRes.data.files?.[0]?.id) return rootRes.data.files[0].id;
+
+  // Final fallback: broad search across all Drive files accessible to the
+  // service account — catches the case where the file was saved in a sibling
+  // folder (e.g. SPJIMR/Calendar/ when root is SPJIMR/Academics/).
+  const broadRes = await drive.files.list({
+    q: `name = '${WEEKLY_SESSIONS_FILENAME}' and trashed = false`,
+    fields: "files(id, modifiedTime)",
+    orderBy: "modifiedTime desc",
+    pageSize: 1,
+  });
+  return broadRes.data.files?.[0]?.id ?? null;
 }
 
 export async function fetchWeeklySessionRows(): Promise<RawCalendarRow[] | null> {
