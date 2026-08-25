@@ -26,6 +26,13 @@ const DISPLAY_ONLY_SUBJECTS: Record<string, string> = {
 // lowercased. Value must match the Drive folder name exactly.
 const SUBJECT_CODE_ALIASES: Record<string, string> = {
   bdta: "Business Transformation in the Digital Age",
+  // Functional Depth term abbreviations
+  os: "Operations Strategy",
+  lm: "Logistics Management",
+  pss: "Procurement & Strategic Sourcing",
+  scpc: "Supply Chain Planning & Coordination",
+  scpm: "Strategic Cost & Profitability Management",
+  som: "Service Operations & Management",
 };
 
 interface MatchResult {

@@ -4,6 +4,7 @@ import { DriveFileLink } from "@/components/drive-file-link";
 import { fetchDriveFileTagsForSubject, fetchUpcomingSessions } from "@/lib/queries";
 import type { UpcomingSession } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
+import { SyncNowButton } from "./sync-button";
 
 function formatDateHeading(dateStr: string): string {
   const [year, month, day] = dateStr.split("-").map(Number);
@@ -126,11 +127,14 @@ export default async function ClassPrepPage() {
     <div className="flex flex-col gap-6">
       <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Class Prep" }]} />
 
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Class Prep</h1>
-        <p className="text-sm text-muted-foreground">
-          This week&apos;s sessions, synced from your institute calendar, with linked pre-reads from Drive.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Class Prep</h1>
+          <p className="text-sm text-muted-foreground">
+            This week&apos;s sessions, synced from your institute calendar, with linked pre-reads from Drive.
+          </p>
+        </div>
+        <SyncNowButton />
       </div>
 
       {dateGroups.length === 0 ? (

@@ -138,6 +138,7 @@ const CATEGORY_FOLDER_NAMES = new Set([
   "PGPM Core Foundation",
   "PGPM Pre Foundation",
   "PGPM Leadership, Innovation & Change",
+  "Functional Depth",
 ]);
 
 // Display order for the "MBA Study Materials" term cards — program
@@ -147,6 +148,7 @@ const CATEGORY_ORDER = [
   "PGPM Core Foundation",
   "PGPM Foundation",
   "PGPM Leadership, Innovation & Change",
+  "Functional Depth",
 ];
 
 export async function listSubjectFolders(drive: drive_v3.Drive, rootFolderId: string): Promise<DriveFolder[]> {
