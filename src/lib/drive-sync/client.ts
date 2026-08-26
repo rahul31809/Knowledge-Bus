@@ -151,12 +151,27 @@ const CATEGORY_ORDER = [
   "Functional Depth",
 ];
 
-export async function listSubjectFolders(drive: drive_v3.Drive, rootFolderId: string): Promise<DriveFolder[]> {
+// Returns the list of subfolders to scan for category/subject folders.
+// If the root's direct children don't include any category folder (e.g. the
+// env var points to a SPJIMR root that contains an "Academics" intermediary),
+// navigate into "Academics" first so category folders like "Functional Depth"
+// are reachable regardless of how deep the root is configured.
+async function resolveSubfolders(drive: drive_v3.Drive, rootFolderId: string): Promise<DriveChild[]> {
   const rootChildren = await listFolderChildren(drive, rootFolderId);
   const rootSubfolders = rootChildren.filter((c) => c.mimeType === FOLDER_MIME);
+  const hasCategoryDirect = rootSubfolders.some((f) => CATEGORY_FOLDER_NAMES.has(f.name));
+  if (hasCategoryDirect) return rootSubfolders;
+  const academics = rootSubfolders.find((f) => f.name === "Academics");
+  if (!academics) return rootSubfolders;
+  const academicsChildren = await listFolderChildren(drive, academics.id);
+  return academicsChildren.filter((c) => c.mimeType === FOLDER_MIME);
+}
+
+export async function listSubjectFolders(drive: drive_v3.Drive, rootFolderId: string): Promise<DriveFolder[]> {
+  const subfolders = await resolveSubfolders(drive, rootFolderId);
 
   const result: DriveFolder[] = [];
-  for (const folder of rootSubfolders) {
+  for (const folder of subfolders) {
     if (CATEGORY_FOLDER_NAMES.has(folder.name)) {
       const children = await listFolderChildren(drive, folder.id);
       const courseFolders = children.filter((c) => c.mimeType === FOLDER_MIME);
@@ -178,8 +193,8 @@ export interface DriveCategoryGroup {
 // which browses subjects term-by-term. Non-category root folders (e.g. "News
 // Paper and Magazines") aren't part of MBA Study Materials and are skipped.
 export async function listSubjectFoldersByCategory(drive: drive_v3.Drive, rootFolderId: string): Promise<DriveCategoryGroup[]> {
-  const rootChildren = await listFolderChildren(drive, rootFolderId);
-  const categoryFolders = rootChildren.filter((c) => c.mimeType === FOLDER_MIME && CATEGORY_FOLDER_NAMES.has(c.name));
+  const subfolders = await resolveSubfolders(drive, rootFolderId);
+  const categoryFolders = subfolders.filter((c) => CATEGORY_FOLDER_NAMES.has(c.name));
 
   const groups = new Map<string, DriveFolder[]>();
   for (const folder of categoryFolders) {
