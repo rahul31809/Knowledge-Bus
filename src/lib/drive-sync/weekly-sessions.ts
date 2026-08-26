@@ -86,35 +86,31 @@ export async function fetchWeeklySessionRows(): Promise<RawCalendarRow[] | null>
   const rootFolderId = process.env.DRIVE_SUBJECTS_ROOT_FOLDER_ID;
   if (!rootFolderId || !process.env.GOOGLE_SERVICE_ACCOUNT_JSON) return null;
 
-  try {
-    const drive = getDriveClient();
-    const fileId = await findCalendarFile(drive, rootFolderId);
-    if (!fileId) return null;
+  const drive = getDriveClient();
+  const fileId = await findCalendarFile(drive, rootFolderId);
+  if (!fileId) return null;
 
-    const res = await drive.files.get({ fileId, alt: "media" }, { responseType: "stream" });
-    const chunks: Buffer[] = [];
-    await new Promise<void>((resolve, reject) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const stream = res.data as any;
-      stream.on("data", (chunk: Buffer) => chunks.push(chunk));
-      stream.on("end", resolve);
-      stream.on("error", reject);
-    });
-    const fileBuffer = Buffer.concat(chunks);
-    const workbook = XLSX.read(fileBuffer, { type: "buffer", cellDates: true });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { raw: false, dateNF: "yyyy-mm-dd" });
+  const res = await drive.files.get({ fileId, alt: "media" }, { responseType: "stream" });
+  const chunks: Buffer[] = [];
+  await new Promise<void>((resolve, reject) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const stream = res.data as any;
+    stream.on("data", (chunk: Buffer) => chunks.push(chunk));
+    stream.on("end", resolve);
+    stream.on("error", reject);
+  });
+  const fileBuffer = Buffer.concat(chunks);
+  const workbook = XLSX.read(fileBuffer, { type: "buffer", cellDates: true });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { raw: false, dateNF: "yyyy-mm-dd" });
 
-    return rows
-      .map((row) => {
-        const date = findColumn(row, ["date"]);
-        const title = findColumn(row, ["event title", "title", "event"]);
-        const time = findColumn(row, ["time"]);
-        if (typeof date !== "string" || typeof title !== "string" || !date.trim() || !title.trim()) return null;
-        return { date: date.trim(), title: title.trim(), time: typeof time === "string" && time.trim() ? time.trim() : null };
-      })
-      .filter((r): r is RawCalendarRow => r !== null);
-  } catch {
-    return null;
-  }
+  return rows
+    .map((row) => {
+      const date = findColumn(row, ["date"]);
+      const title = findColumn(row, ["event title", "title", "event"]);
+      const time = findColumn(row, ["time"]);
+      if (typeof date !== "string" || typeof title !== "string" || !date.trim() || !title.trim()) return null;
+      return { date: date.trim(), title: title.trim(), time: typeof time === "string" && time.trim() ? time.trim() : null };
+    })
+    .filter((r): r is RawCalendarRow => r !== null);
 }

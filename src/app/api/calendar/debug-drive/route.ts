@@ -54,14 +54,24 @@ export async function GET() {
       results.directById = { error: String(e) };
     }
 
-    // 4. Try downloading and parsing the xlsx
+    // 4. Try downloading and parsing the xlsx (stream approach — same as production code)
     const idToDownload = foundFileId ?? knownId;
     try {
       const res = await drive.files.get(
         { fileId: idToDownload, alt: "media" },
-        { responseType: "arraybuffer" }
+        { responseType: "stream" }
       );
-      const workbook = XLSX.read(res.data as ArrayBuffer, { type: "array", cellDates: true });
+      const chunks: Buffer[] = [];
+      await new Promise<void>((resolve, reject) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const stream = res.data as any;
+        stream.on("data", (chunk: Buffer) => chunks.push(chunk));
+        stream.on("end", resolve);
+        stream.on("error", reject);
+      });
+      const fileBuffer = Buffer.concat(chunks);
+      results.downloadedBytes = fileBuffer.length;
+      const workbook = XLSX.read(fileBuffer, { type: "buffer", cellDates: true });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { raw: false, dateNF: "yyyy-mm-dd" });
       results.xlsxDownload = { ok: true, rowCount: rows.length, firstRow: rows[0] ?? null };

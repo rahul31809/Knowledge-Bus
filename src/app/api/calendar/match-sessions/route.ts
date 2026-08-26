@@ -145,7 +145,12 @@ export async function GET(request: Request) {
   }
   const supabase = createSupabaseClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
 
-  const rows = await fetchWeeklySessionRows();
+  let rows: Awaited<ReturnType<typeof fetchWeeklySessionRows>>;
+  try {
+    rows = await fetchWeeklySessionRows();
+  } catch (e) {
+    return NextResponse.json({ ok: false, error: `Drive read failed: ${String(e)}` });
+  }
   if (rows === null) {
     return NextResponse.json({
       ok: false,
