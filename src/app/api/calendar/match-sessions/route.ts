@@ -61,14 +61,23 @@ async function processRow(
     if (displayOnly) return { ...base, subject: displayOnly, sessionLabel: null, sector: null, files: [] };
 
     const rawCode = parsed.subjectCode.trim().toLowerCase();
-    // Exact match first, then substring scan for codes embedded in longer strings
-    // (e.g. "PGPM: SCPM" → finds "scpm", "Python Prof. Dhruven" → finds "python")
+    // 1. Exact alias match
+    // 2. Substring alias scan (e.g. "PGPM: SCPM" → finds "scpm")
+    // 3. Direct Drive folder name match (case-insensitive) — handles full-name
+    //    event titles like "Operations Strategy Session 1" without Gemini
+    // 4. Gemini fuzzy match as last resort
     const alias =
       SUBJECT_CODE_ALIASES[rawCode] ??
       Object.entries(SUBJECT_CODE_ALIASES).find(([key]) =>
         new RegExp(`\\b${key}\\b`, "i").test(rawCode)
       )?.[1];
-    const subject = alias ?? await matchSubjectName(parsed.subjectCode, candidateSubjects).catch(() => null);
+    const directMatch = !alias
+      ? candidateSubjects.find((s) => s.trim().toLowerCase() === rawCode)
+      : undefined;
+    const subject =
+      alias ??
+      directMatch ??
+      await matchSubjectName(parsed.subjectCode, candidateSubjects).catch(() => null);
     if (!subject) return { ...base, subject: null, sessionLabel: null, sector: null, files: [] };
 
     const drive = await fetchSubjectDriveResources(subject);
