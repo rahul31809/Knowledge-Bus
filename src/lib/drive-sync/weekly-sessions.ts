@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx";
+import { google } from "googleapis";
 import { getDriveClient } from "./client";
 
 const WEEKLY_SESSIONS_FILENAME = "weekly-sessions.xlsx";
@@ -90,17 +91,21 @@ export async function fetchWeeklySessionRows(): Promise<RawCalendarRow[] | null>
   const fileId = await findCalendarFile(drive, rootFolderId);
   if (!fileId) return null;
 
-  const res = await drive.files.get({ fileId, alt: "media" }, { responseType: "stream" });
-  const chunks: Buffer[] = [];
-  await new Promise<void>((resolve, reject) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const stream = res.data as any;
-    stream.on("data", (chunk: Buffer) => chunks.push(chunk));
-    stream.on("end", resolve);
-    stream.on("error", reject);
+  // Use native fetch instead of the googleapis client for binary downloads —
+  // the gaxios stream/arraybuffer modes produce data that SheetJS misreads.
+  const credentialsJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON!;
+  const auth = new google.auth.GoogleAuth({
+    credentials: JSON.parse(credentialsJson),
+    scopes: ["https://www.googleapis.com/auth/drive.readonly"],
   });
-  const fileBuffer = Buffer.concat(chunks);
-  const workbook = XLSX.read(fileBuffer.toString("base64"), { type: "base64", cellDates: true });
+  const accessToken = await auth.getAccessToken();
+  const fetchRes = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  if (!fetchRes.ok) throw new Error(`Drive fetch ${fetchRes.status}: ${await fetchRes.text()}`);
+  const arrayBuffer = await fetchRes.arrayBuffer();
+  const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: "array", cellDates: true });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { raw: false, dateNF: "yyyy-mm-dd" });
 
