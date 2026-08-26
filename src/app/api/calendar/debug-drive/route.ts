@@ -54,7 +54,7 @@ export async function GET() {
       results.directById = { error: String(e) };
     }
 
-    // 4. Try downloading and parsing the xlsx (stream approach — same as production code)
+    // 4. Download and inspect raw bytes, then try xlsx parse
     const idToDownload = foundFileId ?? knownId;
     try {
       const res = await drive.files.get(
@@ -71,12 +71,21 @@ export async function GET() {
       });
       const fileBuffer = Buffer.concat(chunks);
       results.downloadedBytes = fileBuffer.length;
-      const workbook = XLSX.read(fileBuffer, { type: "buffer", cellDates: true });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { raw: false, dateNF: "yyyy-mm-dd" });
-      results.xlsxDownload = { ok: true, rowCount: rows.length, firstRow: rows[0] ?? null };
+      // Show first 60 bytes as hex to identify file type
+      results.first60BytesHex = fileBuffer.slice(0, 60).toString("hex");
+      // Also try to read as UTF-8 text (reveals if it's CSV/HTML)
+      results.first200AsText = fileBuffer.slice(0, 200).toString("utf-8");
+
+      try {
+        const workbook = XLSX.read(fileBuffer, { type: "buffer", cellDates: true });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { raw: false, dateNF: "yyyy-mm-dd" });
+        results.xlsxDownload = { ok: true, rowCount: rows.length, firstRow: rows[0] ?? null };
+      } catch (e) {
+        results.xlsxDownload = { error: String(e) };
+      }
     } catch (e) {
-      results.xlsxDownload = { error: String(e) };
+      results.downloadError = String(e);
     }
   } catch (e) {
     results.driveClientError = String(e);
