@@ -100,7 +100,7 @@ export async function fetchWeeklySessionRows(): Promise<RawCalendarRow[] | null>
     stream.on("error", reject);
   });
   const fileBuffer = Buffer.concat(chunks);
-  const workbook = XLSX.read(fileBuffer, { type: "buffer", cellDates: true });
+  const workbook = XLSX.read(fileBuffer.toString("base64"), { type: "base64", cellDates: true });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { raw: false, dateNF: "yyyy-mm-dd" });
 
