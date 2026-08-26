@@ -145,7 +145,8 @@ export async function GET(request: Request) {
     });
   }
 
-  const sessionRows = rows.filter((r) => /session/i.test(r.title));
+  // All events come from class-specific calendars so no title filter needed
+  const sessionRows = rows;
 
   // Fetch candidate subjects once upfront, then process all sessions in parallel
   const candidateSubjects = (await fetchDriveSubjectNames()) ?? [];
