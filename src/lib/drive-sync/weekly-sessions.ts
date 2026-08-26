@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { google } from "googleapis";
 import { getDriveClient } from "./client";
 
@@ -12,20 +12,6 @@ export interface RawCalendarRow {
   title: string;
 }
 
-function findColumn(row: Record<string, unknown>, candidates: string[]): unknown {
-  const keys = Object.keys(row);
-  for (const candidate of candidates) {
-    const key = keys.find((k) => k.trim().toLowerCase() === candidate);
-    if (key) return row[key];
-  }
-  return undefined;
-}
-
-// Searches for weekly-sessions.xlsx using three strategies, each wrapped in
-// its own try/catch so a failure in one always falls through to the next.
-// The broad name search (step 3) is the reliable final fallback — the service
-// account is an explicit reader on the file even when folder-level listing
-// is unavailable.
 async function findCalendarFile(drive: ReturnType<typeof getDriveClient>, rootFolderId: string): Promise<string | null> {
   async function fileInFolder(folderId: string): Promise<string | null> {
     try {
@@ -50,19 +36,19 @@ async function findCalendarFile(drive: ReturnType<typeof getDriveClient>, rootFo
     } catch { return null; }
   }
 
-  // 1. Academics/Calendar/ — primary location (routine saves here)
+  // 1. root/Calendar/
   const calFolderId = await calendarSubfolder(rootFolderId);
   if (calFolderId) {
     const fileId = await fileInFolder(calFolderId);
     if (fileId) return fileId;
   }
 
-  // 2. SPJIMR/Calendar/ — sibling of Academics (old routine location)
+  // 2. root's parent/Calendar/ (sibling search)
   try {
     const rootMeta = await drive.files.get({ fileId: rootFolderId, fields: "parents" });
-    const spjimrId = rootMeta.data.parents?.[0];
-    if (spjimrId) {
-      const siblingCalId = await calendarSubfolder(spjimrId);
+    const parentId = rootMeta.data.parents?.[0];
+    if (parentId) {
+      const siblingCalId = await calendarSubfolder(parentId);
       if (siblingCalId) {
         const fileId = await fileInFolder(siblingCalId);
         if (fileId) return fileId;
@@ -70,8 +56,7 @@ async function findCalendarFile(drive: ReturnType<typeof getDriveClient>, rootFo
     }
   } catch { /* continue */ }
 
-  // 3. Broad name search — works as long as the service account is an explicit
-  //    reader on the file, regardless of folder-level access.
+  // 3. Broad name search — works as long as the service account is a reader on the file.
   try {
     const broadRes = await drive.files.list({
       q: `name = '${WEEKLY_SESSIONS_FILENAME}' and trashed = false`,
@@ -91,8 +76,8 @@ export async function fetchWeeklySessionRows(): Promise<RawCalendarRow[] | null>
   const fileId = await findCalendarFile(drive, rootFolderId);
   if (!fileId) return null;
 
-  // Use native fetch instead of the googleapis client for binary downloads —
-  // the gaxios stream/arraybuffer modes produce data that SheetJS misreads.
+  // Use native fetch for binary download — googleapis stream/arraybuffer modes
+  // produce data that SheetJS misreads; native fetch gives a clean ArrayBuffer.
   const credentialsJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON!;
   const auth = new google.auth.GoogleAuth({
     credentials: JSON.parse(credentialsJson),
@@ -105,17 +90,45 @@ export async function fetchWeeklySessionRows(): Promise<RawCalendarRow[] | null>
   );
   if (!fetchRes.ok) throw new Error(`Drive fetch ${fetchRes.status}: ${await fetchRes.text()}`);
   const arrayBuffer = await fetchRes.arrayBuffer();
-  const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: "array", cellDates: true });
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { raw: false, dateNF: "yyyy-mm-dd" });
+  const buffer = Buffer.from(arrayBuffer);
 
-  return rows
-    .map((row) => {
-      const date = findColumn(row, ["date"]);
-      const title = findColumn(row, ["event title", "title", "event"]);
-      const time = findColumn(row, ["time"]);
-      if (typeof date !== "string" || typeof title !== "string" || !date.trim() || !title.trim()) return null;
-      return { date: date.trim(), title: title.trim(), time: typeof time === "string" && time.trim() ? time.trim() : null };
-    })
-    .filter((r): r is RawCalendarRow => r !== null);
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(buffer);
+  const sheet = workbook.worksheets[0];
+  if (!sheet) return [];
+
+  // Read header row to find column indices
+  const headerRow = sheet.getRow(1);
+  let dateCol = -1, timeCol = -1, titleCol = -1;
+  headerRow.eachCell((cell, colNumber) => {
+    const h = String(cell.value ?? "").trim().toLowerCase();
+    if (h === "date") dateCol = colNumber;
+    else if (h === "time") timeCol = colNumber;
+    else if (h === "event title" || h === "title" || h === "event") titleCol = colNumber;
+  });
+  if (dateCol === -1 || titleCol === -1) return [];
+
+  const rows: RawCalendarRow[] = [];
+  sheet.eachRow((row, rowIndex) => {
+    if (rowIndex === 1) return; // skip header
+    const rawDate = row.getCell(dateCol).value;
+    const rawTitle = row.getCell(titleCol).value;
+    const rawTime = timeCol !== -1 ? row.getCell(timeCol).value : null;
+
+    let date = "";
+    if (rawDate instanceof Date) {
+      date = rawDate.toISOString().slice(0, 10);
+    } else if (rawDate !== null && rawDate !== undefined) {
+      date = String(rawDate).trim();
+    }
+
+    const title = rawTitle !== null && rawTitle !== undefined ? String(rawTitle).trim() : "";
+    const time = rawTime !== null && rawTime !== undefined ? String(rawTime).trim() : null;
+
+    if (date && title) {
+      rows.push({ date, title, time: time || null });
+    }
+  });
+
+  return rows;
 }
