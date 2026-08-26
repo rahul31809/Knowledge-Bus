@@ -33,6 +33,7 @@ const SUBJECT_CODE_ALIASES: Record<string, string> = {
   scpc: "Supply Chain Planning & Coordination",
   scpm: "Strategic Cost & Profitability Management",
   som: "Service Operations & Management",
+  python: "Python",
 };
 
 interface MatchResult {
@@ -59,7 +60,14 @@ async function processRow(
     const displayOnly = DISPLAY_ONLY_SUBJECTS[parsed.subjectCode.trim().toLowerCase()];
     if (displayOnly) return { ...base, subject: displayOnly, sessionLabel: null, sector: null, files: [] };
 
-    const alias = SUBJECT_CODE_ALIASES[parsed.subjectCode.trim().toLowerCase()];
+    const rawCode = parsed.subjectCode.trim().toLowerCase();
+    // Exact match first, then substring scan for codes embedded in longer strings
+    // (e.g. "PGPM: SCPM" → finds "scpm", "Python Prof. Dhruven" → finds "python")
+    const alias =
+      SUBJECT_CODE_ALIASES[rawCode] ??
+      Object.entries(SUBJECT_CODE_ALIASES).find(([key]) =>
+        new RegExp(`\\b${key}\\b`, "i").test(rawCode)
+      )?.[1];
     const subject = alias ?? await matchSubjectName(parsed.subjectCode, candidateSubjects).catch(() => null);
     if (!subject) return { ...base, subject: null, sessionLabel: null, sector: null, files: [] };
 

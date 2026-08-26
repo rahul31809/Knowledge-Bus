@@ -6,31 +6,48 @@ export interface ParsedSessionEvent {
   sessionRef: string;
 }
 
-// Calendar titles roughly follow "<Subject> - DIV <X> - Session <N[& M]>",
-// e.g. "ET - DIV C - Session 5 & 6" — but real data shows inconsistent
-// delimiters (dashes, underscores, mixed spacing) and an occasional missing
-// DIV segment. Extracting the session reference and the DIV segment via
-// regex (rather than splitting on a fixed delimiter) is robust to all of
-// that; whatever text remains is the subject code/name, fuzzy-matched by
-// Gemini downstream anyway so leftover noise there is harmless.
+// Handles two calendar title formats:
+//
+// Format 1 — "Subject - DIV X - Session N" (old timetable style):
+//   "ET - DIV C - Session 5 & 6", "MCOM_DIV C_Session 29 & 30"
+//
+// Format 2 — "PGPM-SUBCODE-N&M" (Functional Depth style):
+//   "PGPM-PSS-2&3", "PGPM/Batch22-OS-1&2", "PGPM/B22-SOM-1",
+//   "PGPM: SCPM Session 1&2" (hybrid — still caught by Format 1)
+//
+// In both cases the returned subjectCode may contain surrounding noise
+// (e.g. "PGPM: SCPM") — the route resolves it via alias substring search
+// before falling back to Gemini.
 export function parseSessionEventTitle(title: string): ParsedSessionEvent | null {
-  // Underscores count as word characters in regex, which silently breaks
-  // \b boundaries around "DIV" in titles like "MCOM_DIV C_Session 29 & 30"
-  // — normalizing to spaces first keeps boundary matching reliable.
   const normalized = title.replace(/_/g, " ");
 
+  // Format 1: explicit "Session N" keyword
   const sessionMatch = normalized.match(/session\s*[-–]?\s*(?:no\.?\s*)?\d+(?:\s*[,&]\s*\d+)*/i);
-  if (!sessionMatch) return null;
-  const sessionRef = sessionMatch[0];
+  if (sessionMatch) {
+    const sessionRef = sessionMatch[0];
+    const withoutSession = normalized.slice(0, sessionMatch.index) + normalized.slice(sessionMatch.index! + sessionRef.length);
+    const withoutDiv = withoutSession.replace(/\bdiv\b[\s-]*\w*/gi, " ");
+    const subjectCode = withoutDiv.replace(/^[\s\-:]+|[\s\-:]+$/g, "").trim().replace(/\s*&\s*/g, " and ");
+    if (!subjectCode) return null;
+    return { rawTitle: title, subjectCode, sessionRef };
+  }
 
-  const withoutSession = normalized.slice(0, sessionMatch.index) + normalized.slice(sessionMatch.index! + sessionRef.length);
-  const withoutDiv = withoutSession.replace(/\bdiv\b[\s-]*\w*/gi, " ");
-  // Normalise "&" → "and" so "Systems & Design Thinking" matches the Drive
-  // folder "Systems and Design Thinking" without needing per-subject aliases.
-  const subjectCode = withoutDiv.replace(/^[\s\-:]+|[\s\-:]+$/g, "").trim().replace(/\s*&\s*/g, " and ");
-  if (!subjectCode) return null;
+  // Format 2: session numbers appear at the end after a separator,
+  // e.g. "PGPM-PSS-2&3" → subjectCode="PSS", sessionRef="Session 2 & 3"
+  const trailingNums = normalized.match(/[-:/\s]+(\d+(?:\s*&\s*\d+)*)\s*$/);
+  if (trailingNums) {
+    const sessionNums = trailingNums[1].replace(/\s*&\s*/g, " & ");
+    const beforeNums = normalized.slice(0, trailingNums.index);
+    const segments = beforeNums.split(/[-/:,\s]+/).filter((s) => s.trim().length > 0);
+    // Take the last segment that is not a known prefix or pure-number noise
+    const subjectCode = [...segments].reverse().find(
+      (s) => !/^(pgpm|batch\d*|b\d{2}|prof)$/i.test(s) && !/^\d+$/.test(s)
+    );
+    if (!subjectCode) return null;
+    return { rawTitle: title, subjectCode, sessionRef: `Session ${sessionNums}` };
+  }
 
-  return { rawTitle: title, subjectCode, sessionRef };
+  return null;
 }
 
 function getAi(): GoogleGenAI {

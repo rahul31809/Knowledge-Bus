@@ -20,63 +20,66 @@ function findColumn(row: Record<string, unknown>, candidates: string[]): unknown
   return undefined;
 }
 
-// Searches for weekly-sessions.xlsx in all likely locations:
-// 1. SPJIMR/Calendar/ — the canonical location (routine saves here)
-// 2. Academics/Calendar/ — legacy location from a prior fix
-// 3. Broad Drive-wide search — last resort
-//
-// rootFolderId = Academics folder. We navigate up to its parent (SPJIMR) to
-// find the Calendar sibling, since the routine writes to SPJIMR/Calendar/.
+// Searches for weekly-sessions.xlsx using three strategies, each wrapped in
+// its own try/catch so a failure in one always falls through to the next.
+// The broad name search (step 3) is the reliable final fallback — the service
+// account is an explicit reader on the file even when folder-level listing
+// is unavailable.
 async function findCalendarFile(drive: ReturnType<typeof getDriveClient>, rootFolderId: string): Promise<string | null> {
   async function fileInFolder(folderId: string): Promise<string | null> {
-    const res = await drive.files.list({
-      q: `'${folderId}' in parents and name = '${WEEKLY_SESSIONS_FILENAME}' and trashed = false`,
-      fields: "files(id)",
-      orderBy: "modifiedTime desc",
-      pageSize: 1,
-    });
-    return res.data.files?.[0]?.id ?? null;
+    try {
+      const res = await drive.files.list({
+        q: `'${folderId}' in parents and name = '${WEEKLY_SESSIONS_FILENAME}' and trashed = false`,
+        fields: "files(id)",
+        orderBy: "modifiedTime desc",
+        pageSize: 1,
+      });
+      return res.data.files?.[0]?.id ?? null;
+    } catch { return null; }
   }
 
   async function calendarSubfolder(parentId: string): Promise<string | null> {
-    const res = await drive.files.list({
-      q: `'${parentId}' in parents and name = '${CALENDAR_FOLDER_NAME}' and mimeType = '${FOLDER_MIME}' and trashed = false`,
-      fields: "files(id)",
-      pageSize: 1,
-    });
-    return res.data.files?.[0]?.id ?? null;
+    try {
+      const res = await drive.files.list({
+        q: `'${parentId}' in parents and name = '${CALENDAR_FOLDER_NAME}' and mimeType = '${FOLDER_MIME}' and trashed = false`,
+        fields: "files(id)",
+        pageSize: 1,
+      });
+      return res.data.files?.[0]?.id ?? null;
+    } catch { return null; }
   }
 
-  // 1. SPJIMR/Calendar/ — navigate up from Academics to its parent (SPJIMR)
+  // 1. Academics/Calendar/ — primary location (routine saves here)
+  const calFolderId = await calendarSubfolder(rootFolderId);
+  if (calFolderId) {
+    const fileId = await fileInFolder(calFolderId);
+    if (fileId) return fileId;
+  }
+
+  // 2. SPJIMR/Calendar/ — sibling of Academics (old routine location)
   try {
     const rootMeta = await drive.files.get({ fileId: rootFolderId, fields: "parents" });
     const spjimrId = rootMeta.data.parents?.[0];
     if (spjimrId) {
-      const calFolderId = await calendarSubfolder(spjimrId);
-      if (calFolderId) {
-        const fileId = await fileInFolder(calFolderId);
+      const siblingCalId = await calendarSubfolder(spjimrId);
+      if (siblingCalId) {
+        const fileId = await fileInFolder(siblingCalId);
         if (fileId) return fileId;
       }
     }
-  } catch {
-    // parent lookup failed — continue to fallbacks
-  }
+  } catch { /* continue */ }
 
-  // 2. Academics/Calendar/ — legacy location
-  const legacyFolderId = await calendarSubfolder(rootFolderId);
-  if (legacyFolderId) {
-    const fileId = await fileInFolder(legacyFolderId);
-    if (fileId) return fileId;
-  }
-
-  // 3. Broad search across all Drive files the service account can access
-  const broadRes = await drive.files.list({
-    q: `name = '${WEEKLY_SESSIONS_FILENAME}' and trashed = false`,
-    fields: "files(id, modifiedTime)",
-    orderBy: "modifiedTime desc",
-    pageSize: 1,
-  });
-  return broadRes.data.files?.[0]?.id ?? null;
+  // 3. Broad name search — works as long as the service account is an explicit
+  //    reader on the file, regardless of folder-level access.
+  try {
+    const broadRes = await drive.files.list({
+      q: `name = '${WEEKLY_SESSIONS_FILENAME}' and trashed = false`,
+      fields: "files(id, modifiedTime)",
+      orderBy: "modifiedTime desc",
+      pageSize: 1,
+    });
+    return broadRes.data.files?.[0]?.id ?? null;
+  } catch { return null; }
 }
 
 export async function fetchWeeklySessionRows(): Promise<RawCalendarRow[] | null> {
