@@ -20,41 +20,56 @@ function findColumn(row: Record<string, unknown>, candidates: string[]): unknown
   return undefined;
 }
 
-// Finds the "Calendar" subfolder inside the SPJIMR root, then falls back to
-// searching the root itself — so the transition from old (root) to new
-// (subfolder) location is seamless.
+// Searches for weekly-sessions.xlsx in all likely locations:
+// 1. SPJIMR/Calendar/ — the canonical location (routine saves here)
+// 2. Academics/Calendar/ — legacy location from a prior fix
+// 3. Broad Drive-wide search — last resort
+//
+// rootFolderId = Academics folder. We navigate up to its parent (SPJIMR) to
+// find the Calendar sibling, since the routine writes to SPJIMR/Calendar/.
 async function findCalendarFile(drive: ReturnType<typeof getDriveClient>, rootFolderId: string): Promise<string | null> {
-  // Try Calendar subfolder first
-  const folderRes = await drive.files.list({
-    q: `'${rootFolderId}' in parents and name = '${CALENDAR_FOLDER_NAME}' and mimeType = '${FOLDER_MIME}' and trashed = false`,
-    fields: "files(id)",
-    pageSize: 1,
-  });
-  const calendarFolderId = folderRes.data.files?.[0]?.id;
-
-  if (calendarFolderId) {
-    const fileRes = await drive.files.list({
-      q: `'${calendarFolderId}' in parents and name = '${WEEKLY_SESSIONS_FILENAME}' and trashed = false`,
+  async function fileInFolder(folderId: string): Promise<string | null> {
+    const res = await drive.files.list({
+      q: `'${folderId}' in parents and name = '${WEEKLY_SESSIONS_FILENAME}' and trashed = false`,
       fields: "files(id)",
       orderBy: "modifiedTime desc",
       pageSize: 1,
     });
-    const file = fileRes.data.files?.[0];
-    if (file?.id) return file.id;
+    return res.data.files?.[0]?.id ?? null;
   }
 
-  // Fall back to root folder (old location)
-  const rootRes = await drive.files.list({
-    q: `'${rootFolderId}' in parents and name = '${WEEKLY_SESSIONS_FILENAME}' and trashed = false`,
-    fields: "files(id)",
-    orderBy: "modifiedTime desc",
-    pageSize: 1,
-  });
-  if (rootRes.data.files?.[0]?.id) return rootRes.data.files[0].id;
+  async function calendarSubfolder(parentId: string): Promise<string | null> {
+    const res = await drive.files.list({
+      q: `'${parentId}' in parents and name = '${CALENDAR_FOLDER_NAME}' and mimeType = '${FOLDER_MIME}' and trashed = false`,
+      fields: "files(id)",
+      pageSize: 1,
+    });
+    return res.data.files?.[0]?.id ?? null;
+  }
 
-  // Final fallback: broad search across all Drive files accessible to the
-  // service account — catches the case where the file was saved in a sibling
-  // folder (e.g. SPJIMR/Calendar/ when root is SPJIMR/Academics/).
+  // 1. SPJIMR/Calendar/ — navigate up from Academics to its parent (SPJIMR)
+  try {
+    const rootMeta = await drive.files.get({ fileId: rootFolderId, fields: "parents" });
+    const spjimrId = rootMeta.data.parents?.[0];
+    if (spjimrId) {
+      const calFolderId = await calendarSubfolder(spjimrId);
+      if (calFolderId) {
+        const fileId = await fileInFolder(calFolderId);
+        if (fileId) return fileId;
+      }
+    }
+  } catch {
+    // parent lookup failed — continue to fallbacks
+  }
+
+  // 2. Academics/Calendar/ — legacy location
+  const legacyFolderId = await calendarSubfolder(rootFolderId);
+  if (legacyFolderId) {
+    const fileId = await fileInFolder(legacyFolderId);
+    if (fileId) return fileId;
+  }
+
+  // 3. Broad search across all Drive files the service account can access
   const broadRes = await drive.files.list({
     q: `name = '${WEEKLY_SESSIONS_FILENAME}' and trashed = false`,
     fields: "files(id, modifiedTime)",
