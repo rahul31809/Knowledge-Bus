@@ -67,10 +67,26 @@ export async function matchSubjectName(subjectCode: string, candidateSubjects: s
   );
 }
 
-// Drive folders use inconsistent session-range naming ("Session 1&2",
-// "Session 4 to 6") that rarely matches a calendar's session reference
-// ("Session 5 & 6") as an exact string — Gemini resolves which folder's
-// range actually covers the referenced session number(s).
+// Fast local session folder matching — extracts session numbers from both
+// the event ref and each candidate folder name, then finds the folder whose
+// number or range covers all the event's session numbers. Handles formats
+// like "Session 1&2", "Session 4 to 6", "Session 3-4" with no API calls.
+export function matchSessionFolderLocal(sessionRef: string, candidateFolders: string[]): string | null {
+  const refNums = [...sessionRef.matchAll(/\d+/g)].map((m) => Number(m[0]));
+  if (refNums.length === 0 || candidateFolders.length === 0) return null;
+
+  for (const folder of candidateFolders) {
+    const folderNums = [...folder.matchAll(/\d+/g)].map((m) => Number(m[0]));
+    if (folderNums.length === 0) continue;
+    const start = Math.min(...folderNums);
+    const end = Math.max(...folderNums);
+    if (refNums.every((n) => n >= start && n <= end)) return folder;
+  }
+  return null;
+}
+
+// Gemini fallback for edge cases the local matcher can't handle (e.g. topic-
+// named folders with no session numbers). Prefer matchSessionFolderLocal.
 export async function matchSessionFolder(sessionRef: string, candidateFolders: string[]): Promise<string | null> {
   return pickBestMatch(
     `A class is scheduled as "${sessionRef}". Which of these Drive folder names (each covering one or more session numbers) covers that session?`,

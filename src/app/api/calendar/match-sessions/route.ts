@@ -4,7 +4,7 @@ import { createClient as createSessionClient } from "@/lib/supabase/server";
 import { extractPreReadSessionGroups, fetchDriveSubjectNames, fetchSubjectDriveResources, getDriveClient } from "@/lib/drive-sync/client";
 import { extractFileContent } from "@/lib/drive-sync/tagger";
 import { fetchWeeklySessionRows } from "@/lib/drive-sync/weekly-sessions";
-import { extractSectorForSession, matchSectorFolder, matchSessionFolder, matchSubjectName, parseSessionEventTitle } from "@/lib/calendar/session-matcher";
+import { extractSectorForSession, matchSectorFolder, matchSessionFolder, matchSessionFolderLocal, matchSubjectName, parseSessionEventTitle } from "@/lib/calendar/session-matcher";
 
 export const maxDuration = 120;
 
@@ -84,10 +84,10 @@ async function processRow(
       }
     }
 
-    const matchedFolder = await (subject === SECTOR_OUTLINE_SUBJECT && sector
-      ? matchSectorFolder(sector, sessionGroups.map((g) => g.sessionLabel))
-      : matchSessionFolder(matchReference, sessionGroups.map((g) => g.sessionLabel))
-    ).catch(() => null);
+    const labels = sessionGroups.map((g) => g.sessionLabel);
+    const matchedFolder = subject === SECTOR_OUTLINE_SUBJECT && sector
+      ? await matchSectorFolder(sector, labels).catch(() => null)
+      : matchSessionFolderLocal(matchReference, labels) ?? await matchSessionFolder(matchReference, labels).catch(() => null);
 
     let files = sessionGroups.find((g) => g.sessionLabel === matchedFolder)?.files ?? [];
 
