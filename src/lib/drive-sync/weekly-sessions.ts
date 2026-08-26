@@ -90,10 +90,11 @@ export async function fetchWeeklySessionRows(): Promise<RawCalendarRow[] | null>
   );
   if (!fetchRes.ok) throw new Error(`Drive fetch ${fetchRes.status}: ${await fetchRes.text()}`);
   const arrayBuffer = await fetchRes.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
+  const buffer = Buffer.from(new Uint8Array(arrayBuffer));
 
   const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(buffer);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await workbook.xlsx.load(buffer as any);
   const sheet = workbook.worksheets[0];
   if (!sheet) return [];
 
