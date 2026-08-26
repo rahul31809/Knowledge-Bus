@@ -1,4 +1,4 @@
-import ExcelJS from "exceljs";
+import * as XLSX from "xlsx";
 import { google } from "googleapis";
 import { getDriveClient } from "./client";
 
@@ -76,8 +76,7 @@ export async function fetchWeeklySessionRows(): Promise<RawCalendarRow[] | null>
   const fileId = await findCalendarFile(drive, rootFolderId);
   if (!fileId) return null;
 
-  // Use native fetch for binary download — googleapis stream/arraybuffer modes
-  // produce data that SheetJS misreads; native fetch gives a clean ArrayBuffer.
+  // Use native fetch so the ArrayBuffer is untransformed by gaxios internals.
   const credentialsJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON!;
   const auth = new google.auth.GoogleAuth({
     credentials: JSON.parse(credentialsJson),
@@ -89,47 +88,24 @@ export async function fetchWeeklySessionRows(): Promise<RawCalendarRow[] | null>
     { headers: { Authorization: `Bearer ${accessToken}` } }
   );
   if (!fetchRes.ok) throw new Error(`Drive fetch ${fetchRes.status}: ${await fetchRes.text()}`);
+
   const arrayBuffer = await fetchRes.arrayBuffer();
-  const buffer = Buffer.from(new Uint8Array(arrayBuffer));
+  const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: "array", cellDates: true });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { raw: false, dateNF: "yyyy-mm-dd" });
 
-  const workbook = new ExcelJS.Workbook();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await workbook.xlsx.load(buffer as any);
-  const sheet = workbook.worksheets[0];
-  if (!sheet) return [];
-
-  // Read header row to find column indices
-  const headerRow = sheet.getRow(1);
-  let dateCol = -1, timeCol = -1, titleCol = -1;
-  headerRow.eachCell((cell, colNumber) => {
-    const h = String(cell.value ?? "").trim().toLowerCase();
-    if (h === "date") dateCol = colNumber;
-    else if (h === "time") timeCol = colNumber;
-    else if (h === "event title" || h === "title" || h === "event") titleCol = colNumber;
-  });
-  if (dateCol === -1 || titleCol === -1) return [];
-
-  const rows: RawCalendarRow[] = [];
-  sheet.eachRow((row, rowIndex) => {
-    if (rowIndex === 1) return; // skip header
-    const rawDate = row.getCell(dateCol).value;
-    const rawTitle = row.getCell(titleCol).value;
-    const rawTime = timeCol !== -1 ? row.getCell(timeCol).value : null;
-
-    let date = "";
-    if (rawDate instanceof Date) {
-      date = rawDate.toISOString().slice(0, 10);
-    } else if (rawDate !== null && rawDate !== undefined) {
-      date = String(rawDate).trim();
-    }
-
-    const title = rawTitle !== null && rawTitle !== undefined ? String(rawTitle).trim() : "";
-    const time = rawTime !== null && rawTime !== undefined ? String(rawTime).trim() : null;
-
-    if (date && title) {
-      rows.push({ date, title, time: time || null });
-    }
-  });
-
-  return rows;
+  return rows
+    .map((row) => {
+      const keys = Object.keys(row);
+      function col(candidates: string[]): unknown {
+        const key = keys.find((k) => candidates.includes(k.trim().toLowerCase()));
+        return key ? row[key] : undefined;
+      }
+      const date = col(["date"]);
+      const title = col(["event title", "title", "event"]);
+      const time = col(["time"]);
+      if (typeof date !== "string" || typeof title !== "string" || !date.trim() || !title.trim()) return null;
+      return { date: date.trim(), title: title.trim(), time: typeof time === "string" && time.trim() ? time.trim() : null };
+    })
+    .filter((r): r is RawCalendarRow => r !== null);
 }

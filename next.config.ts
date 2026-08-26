@@ -1,13 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  webpack: (config) => {
-    // ExcelJS optionally depends on canvas (for image rendering) which requires
-    // native binaries unavailable in Vercel's serverless environment.
-    // Marking it external prevents the build from trying to bundle it.
-    config.externals = [...(config.externals ?? []), "canvas"];
-    return config;
-  },
+  // Prevent webpack from bundling these packages so they run as native Node.js
+  // CJS modules in serverless functions. xlsx in particular reads binary data
+  // using typed-array operations that break when bundled/transpiled by webpack.
+  serverExternalPackages: ["xlsx"],
 };
 
 export default nextConfig;
