@@ -13,18 +13,25 @@ export function SyncNowButton() {
     setMessage(null);
     try {
       const res = await fetch("/api/calendar/match-sessions");
-      const data = await res.json();
-      if (data.ok) {
+      let data: { ok: boolean; error?: string; matched?: unknown[] } | null = null;
+      try {
+        data = await res.json();
+      } catch {
+        setState("error");
+        setMessage(`HTTP ${res.status} — response was not JSON`);
+        return;
+      }
+      if (data?.ok) {
         setState("done");
         setMessage(`Synced ${(data.matched ?? []).length} sessions`);
         setTimeout(() => window.location.reload(), 800);
       } else {
         setState("error");
-        setMessage(data.error ?? "Sync failed");
+        setMessage(data?.error ?? `HTTP ${res.status} — sync failed`);
       }
     } catch {
       setState("error");
-      setMessage("Network error");
+      setMessage("Network error — request did not reach the server");
     }
   }
 
