@@ -91,8 +91,17 @@ export async function fetchWeeklySessionRows(): Promise<RawCalendarRow[] | null>
     const fileId = await findCalendarFile(drive, rootFolderId);
     if (!fileId) return null;
 
-    const res = await drive.files.get({ fileId, alt: "media" }, { responseType: "arraybuffer" });
-    const workbook = XLSX.read(res.data as ArrayBuffer, { type: "array", cellDates: true });
+    const res = await drive.files.get({ fileId, alt: "media" }, { responseType: "stream" });
+    const chunks: Buffer[] = [];
+    await new Promise<void>((resolve, reject) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const stream = res.data as any;
+      stream.on("data", (chunk: Buffer) => chunks.push(chunk));
+      stream.on("end", resolve);
+      stream.on("error", reject);
+    });
+    const fileBuffer = Buffer.concat(chunks);
+    const workbook = XLSX.read(fileBuffer, { type: "buffer", cellDates: true });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { raw: false, dateNF: "yyyy-mm-dd" });
 
