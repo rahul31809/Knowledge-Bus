@@ -127,7 +127,7 @@ async function processRow(
       }
     }
 
-    const sessionLabel = matchedFolder ?? parsed.sessionRef.replace(/^session/i, "Session");
+    const sessionLabel = parsed.sessionRef.replace(/^session/i, "Session");
 
     return { ...base, subject, sessionLabel, sector, files };
   } catch {
